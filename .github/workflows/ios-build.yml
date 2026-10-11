@@ -15,14 +15,22 @@ jobs:
       - name: Build unsigned app
         run: |
           set -euo pipefail
-          xcodebuild -project GameShield.xcodeproj -scheme GameShield -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
-          test -d build/Build/Products/Release-iphoneos/GameShield.app
+          xcodebuild -project GameShield.xcodeproj -scheme GameShield -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO clean build
+          APP="build/Build/Products/Release-iphoneos/GameShield.app"
+          test -f "$APP/Info.plist"
+          test -f "$APP/GameShield"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$APP/Info.plist" | grep -qx iPhoneOS
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")" = "com.crismunoz303.gameshield"
           mkdir -p Payload
-          cp -R build/Build/Products/Release-iphoneos/GameShield.app Payload/
-          zip -qr GameShield-v1.0-unsigned.ipa Payload
-          unzip -t GameShield-v1.0-unsigned.ipa
+          ditto "$APP" "Payload/GameShield.app"
+          /usr/bin/zip -qry GameShield-v1.1-unsigned.ipa Payload
+          unzip -t GameShield-v1.1-unsigned.ipa
+          unzip -Z1 GameShield-v1.1-unsigned.ipa | grep -qx 'Payload/GameShield.app/Info.plist'
+          unzip -Z1 GameShield-v1.1-unsigned.ipa | grep -qx 'Payload/GameShield.app/GameShield'
       - uses: actions/upload-artifact@v4
         with:
-          name: GameShield-v1.0-unsigned
-          path: GameShield-v1.0-unsigned.ipa
+          name: GameShield-v1.1-unsigned
+          path: GameShield-v1.1-unsigned.ipa
           if-no-files-found: error
