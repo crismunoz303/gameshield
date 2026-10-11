@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: macos-15
@@ -12,25 +14,31 @@ jobs:
         run: brew install xcodegen
       - name: Generate project
         run: xcodegen generate
-      - name: Build unsigned app
+      - name: Build and validate unsigned IPA
         run: |
           set -euo pipefail
           xcodebuild -project GameShield.xcodeproj -scheme GameShield -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO clean build
           APP="build/Build/Products/Release-iphoneos/GameShield.app"
           test -f "$APP/Info.plist"
           test -f "$APP/GameShield"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist"
-          /usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$APP/Info.plist" | grep -qx iPhoneOS
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")" = "com.crismunoz303.gameshield"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$APP/Info.plist" | grep -qx iPhoneOS
           mkdir -p Payload
           ditto "$APP" "Payload/GameShield.app"
-          /usr/bin/zip -qry GameShield-v1.1-unsigned.ipa Payload
-          unzip -t GameShield-v1.1-unsigned.ipa
-          unzip -Z1 GameShield-v1.1-unsigned.ipa | grep -qx 'Payload/GameShield.app/Info.plist'
-          unzip -Z1 GameShield-v1.1-unsigned.ipa | grep -qx 'Payload/GameShield.app/GameShield'
-      - uses: actions/upload-artifact@v4
+          /usr/bin/zip -qry GameShield-v1.2-unsigned.ipa Payload
+          unzip -t GameShield-v1.2-unsigned.ipa
+          unzip -Z1 GameShield-v1.2-unsigned.ipa | grep -qx 'Payload/GameShield.app/Info.plist'
+          unzip -Z1 GameShield-v1.2-unsigned.ipa | grep -qx 'Payload/GameShield.app/GameShield'
+          shasum -a 256 GameShield-v1.2-unsigned.ipa > GameShield-v1.2-unsigned.ipa.sha256
+      - name: Publish direct IPA download to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create v1.2 GameShield-v1.2-unsigned.ipa GameShield-v1.2-unsigned.ipa.sha256 --title "GameShield v1.2 (unsigned IPA)" --notes "Unsigned iPhone app. Download the IPA asset directly, sign it with your existing signer, then install. DNS filtering requires separately approving a DNS profile." --target "$GITHUB_SHA" --latest
+      - name: Keep workflow artifact as backup
+        uses: actions/upload-artifact@v4
         with:
-          name: GameShield-v1.1-unsigned
-          path: GameShield-v1.1-unsigned.ipa
+          name: GameShield-v1.2-unsigned-backup
+          path: GameShield-v1.2-unsigned.ipa
           if-no-files-found: error
