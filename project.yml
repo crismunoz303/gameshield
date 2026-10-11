@@ -1,0 +1,22 @@
+name: GameShield
+options:
+  bundleIdPrefix: com.gameshield
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: '17.0'
+    SWIFT_VERSION: '5.0'
+targets:
+  GameShield:
+    type: application
+    platform: iOS
+    sources: [GameShield]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.gameshield.app
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: '1'
+        CODE_SIGN_STYLE: Manual
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIRequiredDeviceCapabilities: arm64
