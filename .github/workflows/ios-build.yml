@@ -14,11 +14,15 @@ jobs:
         run: xcodegen generate
       - name: Build unsigned app
         run: |
+          set -euo pipefail
           xcodebuild -project GameShield.xcodeproj -scheme GameShield -configuration Release -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+          test -d build/Build/Products/Release-iphoneos/GameShield.app
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/GameShield.app Payload/
-          zip -qr GameShield-v0.1-unsigned.ipa Payload
+          zip -qr GameShield-v1.0-unsigned.ipa Payload
+          unzip -t GameShield-v1.0-unsigned.ipa
       - uses: actions/upload-artifact@v4
         with:
-          name: GameShield-v0.1-unsigned
-          path: GameShield-v0.1-unsigned.ipa
+          name: GameShield-v1.0-unsigned
+          path: GameShield-v1.0-unsigned.ipa
+          if-no-files-found: error

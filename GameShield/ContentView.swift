@@ -1,76 +1,92 @@
 import SwiftUI
+import UIKit
+
+private enum ShieldDNS {
+    static let setup = URL(string: "https://adguard-dns.io/en/public-dns.html")!
+    static let help = URL(string: "https://adguard-dns.io/en/support.html")!
+    static let test = URL(string: "https://adguard.com/en/test.html")!
+}
 
 struct ContentView: View {
     @Environment(\.openURL) private var openURL
-    @State private var completedSetup = false
-    @State private var messagingChecked = false
-    @State private var gameChecked = false
+    @AppStorage("setupConfirmed") private var setupConfirmed = false
+    @AppStorage("messagesTested") private var messagesTested = false
+    @AppStorage("gameTested") private var gameTested = false
+    @AppStorage("hasReadLimitations") private var hasReadLimitations = false
+    @State private var showResetConfirmation = false
 
-    private let providerURL = URL(string: "https://adguard-dns.io/en/public-dns.html")!
-    private let settingsURL = URL(string: UIApplication.openSettingsURLString)!
+    private var checksComplete: Bool {
+        setupConfirmed && messagesTested && gameTested
+    }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+            List {
+                Section {
                     Label("GameShield", systemImage: "shield.lefthalf.filled")
                         .font(.largeTitle.bold())
-                    Text("Free DNS-based game ad filtering")
+                    Text("Free game-ad DNS setup")
                         .font(.headline)
-                    Text("Set up a trusted filtering DNS profile to block many known advertising domains. GameShield cannot activate DNS filtering by itself.")
-                        .foregroundStyle(.secondary)
-
-                    GroupBox("Actual protection status") {
-                        Label("Not independently verified", systemImage: "questionmark.shield")
-                            .foregroundStyle(.orange)
-                        Text("iOS does not expose the active DNS profile status to this app. Check Settings to confirm your selected profile is enabled.")
-                            .font(.footnote)
-                    }
-
-                    GroupBox("1 · Install filtering DNS") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Open the official AdGuard public DNS instructions. Choose the default ad-blocking server, follow the iOS instructions, and approve the profile in Settings.")
-                            Button {
-                                openURL(providerURL)
-                            } label: {
-                                Label("Open official DNS setup", systemImage: "arrow.up.right.square")
-                            }
-                            .buttonStyle(.borderedProminent)
-                            Text("This opens a third-party provider. Its DNS privacy policy applies. No paid subscription is required for its public DNS.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    GroupBox("2 · Verify and test") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Button {
-                                openURL(settingsURL)
-                            } label: {
-                                Label("Open iOS Settings", systemImage: "gearshape")
-                            }
-                            Text("Confirm the DNS profile is active in Settings. Then test a game and your usual messaging apps.")
-                            Toggle("I confirmed DNS setup in Settings", isOn: $completedSetup)
-                            Toggle("Messages and notifications work", isOn: $messagingChecked)
-                            Toggle("I tested an ad-supported game", isOn: $gameChecked)
-                            if completedSetup && messagingChecked && gameChecked {
-                                Label("Manual checks complete — filtering effectiveness varies by game", systemImage: "checkmark.circle")
-                                    .foregroundStyle(.green)
-                            }
-                        }
-                    }
-
-                    GroupBox("Disable or troubleshoot") {
-                        Text("If a game, website, or notification fails, disable or remove the DNS profile in iOS Settings. Closing or deleting GameShield does not disable an installed DNS profile.")
-                    }
-
-                    Text("Limits: DNS filtering is not game-specific; some ads and rewarded ads will remain. It cannot remove ads delivered from the same domain as gameplay. GameShield does not access calls, messages, or notifications.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    Label("DNS status cannot be read by this app", systemImage: "questionmark.shield")
+                        .foregroundStyle(.orange)
+                    Text("GameShield is a setup companion. A separately installed DNS profile performs the actual blocking. No VPN, special entitlements, account, or subscription is required by GameShield.")
+                        .font(.subheadline)
                 }
-                .padding()
+                Section("1 · Activate filtering") {
+                    Text("Use the official AdGuard public DNS page. Select the default ad-blocking service (not the unfiltered server), follow its iOS configuration-profile instructions, and approve the profile in Settings.")
+                    Button { openURL(ShieldDNS.setup) } label: {
+                        Label("Official free DNS setup", systemImage: "safari")
+                    }
+                    Button { openURL(URL(string: UIApplication.openSettingsURLString)!) } label: {
+                        Label("Open iPhone Settings", systemImage: "gearshape")
+                    }
+                    Text("DNS profiles require your approval. An ordinary app cannot install, activate, or remove one silently.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+                Section("2 · Check protection") {
+                    Button { openURL(ShieldDNS.test) } label: {
+                        Label("Open DNS/ad-block test page", systemImage: "checkmark.shield")
+                    }
+                    Text("A web test is only an indication; it cannot prove that all game ads are blocked.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                    Toggle("I enabled filtering DNS in iOS", isOn: $setupConfirmed)
+                    Toggle("Calls, messages and notifications work", isOn: $messagesTested)
+                    Toggle("I tested an ad-supported game", isOn: $gameTested)
+                    Label(checksComplete ? "Manual checks complete" : "Manual checks incomplete", systemImage: checksComplete ? "checkmark.circle.fill" : "circle.dotted")
+                        .foregroundStyle(checksComplete ? .green : .secondary)
+                }
+                Section("3 · Troubleshooting and recovery") {
+                    Text("If an app, game, website, or notification fails, disable the DNS profile in iOS Settings. Removing GameShield alone will not remove the profile.")
+                    Button { openURL(ShieldDNS.help) } label: {
+                        Label("Provider support", systemImage: "questionmark.circle")
+                    }
+                    Button("Reset manual checklist", role: .destructive) {
+                        showResetConfirmation = true
+                    }
+                }
+                Section("Privacy and limitations") {
+                    Toggle("I understand DNS filtering is system-wide", isOn: $hasReadLimitations)
+                    Text("GameShield collects no account, traffic, messages, calls, or notification data. The chosen DNS provider handles DNS queries under its own privacy policy.")
+                    Text("Some ads, rewarded videos, and first-party ad traffic will remain. DNS filtering is not per-game and may impact other apps. App Store and sideloaded games are subject to the same network limitations.")
+                    Text("Checklist choices stay on this iPhone. They are not a measurement of active filtering.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+                Section {
+                    Text("GameShield v1.0 · DNS companion edition")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
             .navigationTitle("GameShield")
+            .confirmationDialog("Reset manual checks?", isPresented: $showResetConfirmation) {
+                Button("Reset checks", role: .destructive) {
+                    setupConfirmed = false
+                    messagesTested = false
+                    gameTested = false
+                    hasReadLimitations = false
+                }
+            } message: {
+                Text("This does not change your iPhone DNS configuration.")
+            }
         }
     }
 }
