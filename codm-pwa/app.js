@@ -52,11 +52,19 @@ function normalPlayer(raw){
     xp:raw.rank.rating, checkedAt:Date.now()
   };
 }
-function allowedArt(raw){
-  try{const url=new URL(raw);const h=url.hostname.toLowerCase();return url.protocol==="https:"&&(h==="codashop.com"||h.endsWith(".codashop.com"))?url.href:null}catch{return null}
+function allowedArt(raw,avatar=false){
+  try{
+    const url=new URL(raw),h=url.hostname.toLowerCase();
+    const publicHost=/^[a-z0-9][a-z0-9.-]*[a-z0-9]$/.test(h)&&h.includes(".")&&
+      !h.includes("..")&&!h.endsWith(".local")&&!h.endsWith(".localhost")&&
+      !h.endsWith(".internal")&&!/^[0-9.]+$/.test(h);
+    if(url.protocol!=="https:"||url.username||url.password||!publicHost||
+       (url.port&&url.port!=="443"))return null;
+    return avatar||h==="codashop.com"||h.endsWith(".codashop.com")?url.href:null;
+  }catch{return null}
 }
 function displayArt(id,fallbackId,url){
-  const el=$(id),fallback=$(fallbackId),safe=allowedArt(url);
+  const el=$(id),fallback=$(fallbackId),safe=allowedArt(url,id==="avatar");
   el.hidden=true;fallback.hidden=false;el.removeAttribute("src");
   if(!safe)return;
   el.onload=()=>{
@@ -72,7 +80,10 @@ function displayArt(id,fallbackId,url){
     }
     el.hidden=false;fallback.hidden=true;
   };
-  el.onerror=()=>{el.hidden=true;fallback.hidden=false};
+  el.onerror=()=>{
+    el.hidden=true;fallback.hidden=false;
+    if(id==="avatar")safeText("avatarSource","Provider image could not load · choose your own");
+  };
   el.src=safe;
 }
 async function refresh(force=false){
@@ -217,6 +228,63 @@ function countryName(code){
   try{return new Intl.DisplayNames([navigator.language||"en"],{type:"region"}).of(code.toUpperCase())}
   catch{return null}
 }
+// Avatar handling is independent of CODM ranked data.
+ // If the unofficial profile lookup has no usable avatar, a user can supply an
+ // actual image from Photos. It is cropped locally; no upload or AI generation.
+function displayPlayerAvatar(){
+  const img=$("avatar"),fallback=$("avatarFallback");
+  const saved=load(uidKey("avatar"),null);
+  const local=typeof saved==="string"&&/^data:image\/jpeg;base64,[a-z0-9+/=]+$/i.test(saved)&&saved.length<600000;
+  $("clearAvatarBtn").hidden=!local;
+  safeText("chooseAvatarBtn",local?"CHANGE":"SET AVATAR");
+  if(local){
+    img.onload=()=>{
+      img.hidden=false;fallback.hidden=true;
+      safeText("avatarSource","Your chosen image · saved on this device");
+    };
+    img.onerror=()=>{
+      img.hidden=true;fallback.hidden=false;
+      safeText("avatarSource","Saved image unavailable · choose another");
+    };
+    img.hidden=true;fallback.hidden=false;
+    img.src=saved;
+    return;
+  }
+  const remote=allowedArt(player.pic,true);
+  safeText("avatarSource",remote?"Loading profile image from provider…":"No usable avatar received · choose your image");
+  displayPlayerAvatar();
+}
+async function saveLocalAvatar(file){
+  if(!uid||!file)return;
+  if(!file.type.startsWith("image/")||file.type==="image/svg+xml"||file.size>10000000)
+    throw new Error("Choose a photo under 10 MB.");
+  const originalURL=URL.createObjectURL(file);
+  try{
+    const img=new Image();
+    await new Promise((resolve,reject)=>{
+      img.onload=resolve;
+      img.onerror=()=>reject(new Error("This image can't be opened. Try PNG or JPEG."));
+      img.src=originalURL;
+    });
+    if(!img.naturalWidth||!img.naturalHeight)throw new Error("That image is empty.");
+    const canvas=document.createElement("canvas");
+    canvas.width=canvas.height=300;
+    const ctx=canvas.getContext("2d");
+    if(!ctx)throw new Error("Image editor unavailable.");
+    ctx.fillStyle="#151a1d";ctx.fillRect(0,0,300,300);
+    const ratio=Math.max(300/img.naturalWidth,300/img.naturalHeight);
+    const drawW=img.naturalWidth*ratio,drawH=img.naturalHeight*ratio;
+    ctx.drawImage(img,(300-drawW)/2,(300-drawH)/2,drawW,drawH);
+    const value=canvas.toDataURL("image/jpeg",.84);
+    if(value.length>600000)throw new Error("Compressed image is too large.");
+    try{
+      localStorage.setItem(STORAGE_PREFIX+uidKey("avatar"),JSON.stringify(value));
+    }catch{throw new Error("Not enough local storage for this image.");}
+    displayPlayerAvatar();
+    note("Avatar saved to this browser for this UID.");
+  }finally{URL.revokeObjectURL(originalURL)}
+}
+
 function renderPlayer(){
   safeText("profileName",player.nickname);safeText("profileRank",player.rank);
   safeText("profileLevel","LEVEL "+(player.level??"—"));
@@ -440,6 +508,17 @@ document.querySelectorAll("[data-range]").forEach(b=>b.addEventListener("click",
 }));
 $("connectForm").addEventListener("submit",e=>{e.preventDefault();connect($("uidInput").value.trim())});
 $("refreshBtn").addEventListener("click",()=>refresh(true));
+$("chooseAvatarBtn").addEventListener("click",()=>$("avatarFile").click());
+$("avatarFile").addEventListener("change",async event=>{
+  const file=event.target.files?.[0];
+  try{await saveLocalAvatar(file)}catch(error){note(error.message||"Couldn't save avatar.")}
+  event.target.value="";
+});
+$("clearAvatarBtn").addEventListener("click",()=>{
+  try{localStorage.removeItem(STORAGE_PREFIX+uidKey("avatar"))}catch{}
+  displayPlayerAvatar();
+  note("Device avatar cleared. Restored provider avatar if available.");
+});
 $("copyUID").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(uid);note("Player UID copied.")}catch{note("Clipboard unavailable: select your UID in Player.")}});
 $("exportBtn").addEventListener("click",exportHistory);
 $("backupBtn").addEventListener("click",backupHistory);
