@@ -1,7 +1,7 @@
 import SwiftUI
 import Charts
 
-// CODM Rank Tracker v0.3.0 — rank and XP are read-only, sourced from an unofficial service.
+// CODM Rank Tracker v0.4.0 — rank and XP are read-only, sourced from an unofficial service.
 private enum Theme {
     static let ink = Color(red: 0.032, green: 0.041, blue: 0.066)
     static let card = Color(red: 0.090, green: 0.114, blue: 0.158)
@@ -14,17 +14,30 @@ private enum Theme {
     static let line = Color.white.opacity(0.11)
 }
 
-private struct RemoteLevel: Decodable { let current: Int? }
+private struct RemoteLevel: Decodable {
+    let current: Int?
+    let image: String?
+}
 private struct RemoteRank: Decodable {
     let multiplayerRank: String?
     let rating: Int?
     let image: String?
+    let rankClass: Int?
+    private enum CodingKeys: String, CodingKey {
+        case multiplayerRank, rating, image
+        case rankClass = "class"
+    }
 }
 private struct RemoteProfile: Decodable {
     let success: Bool
     let nickname: String?
+    let pic: String?
+    let countryCode: String?
+    let countryId: Int?
+    let shortId: String?
     let level: RemoteLevel?
     let rank: RemoteRank?
+    // A state-changing dailyGift URL may appear; intentionally never fetched.
 }
 private struct Player: Codable {
     let nickname: String
@@ -33,6 +46,12 @@ private struct Player: Codable {
     let xp: Int
     let checkedAt: Date
     let rankImageURL: String?
+    let avatarURL: String?
+    let levelImageURL: String?
+    let countryCode: String?
+    let countryId: Int?
+    let shortId: String?
+    let rankClass: Int?
 }
 private struct Point: Codable, Identifiable {
     let id: UUID
@@ -103,7 +122,18 @@ private final class RankStore: ObservableObject {
                 throw NSError(domain: "CODM", code: 3, userInfo: [NSLocalizedDescriptionKey: "Rank data is unavailable or its format changed."])
             }
             guard activeUID == uid else { return }
-            let updated = Player(nickname: name, level: remote.level?.current, rank: rank, xp: xp, checkedAt: Date(), rankImageURL: remote.rank?.image)
+            let updated = Player(
+                nickname: name,
+                level: remote.level?.current,
+                rank: rank, xp: xp, checkedAt: Date(),
+                rankImageURL: remote.rank?.image,
+                avatarURL: remote.pic,
+                levelImageURL: remote.level?.image,
+                countryCode: remote.countryCode,
+                countryId: remote.countryId,
+                shortId: remote.shortId,
+                rankClass: remote.rank?.rankClass
+            )
             player = updated
             // Record changes, not individual matches. A delta can cover multiple games.
             if points.last?.xp != xp || points.last?.rank != rank {
@@ -152,11 +182,45 @@ private final class RankStore: ObservableObject {
         guard filtered.count > 1, let first = filtered.first, let last = filtered.last else { return nil }
         return last.xp - first.xp
     }
+    var netRecorded: Int? {
+        guard let first = points.first, let last = points.last, points.count > 1 else { return nil }
+        return last.xp - first.xp
+    }
+    var largestDrop: Int? { changes.map(\.difference).filter { $0 < 0 }.min() }
+    var firstDate: Date? { points.first?.date }
+
+    var historyCSV: String {
+        let formatter = ISO8601DateFormatter()
+        var output = ["timestamp_utc,multiplayer_xp,rank,change_since_previous_reading"]
+        for (index, point) in points.enumerated() {
+            let delta = index == 0 ? "" : String(point.xp - points[index - 1].xp)
+            // Only locally generated fields go into this export.
+            let safeRank = "\"" + point.rank.replacingOccurrences(of: "\"", with: "\"\"") + "\""
+            output.append("\(formatter.string(from: point.date)),\(point.xp),\(safeRank),\(delta)")
+        }
+        return output.joined(separator: "\n")
+    }
 }
 
 @main
 struct CODMRankApp: App {
     var body: some Scene { WindowGroup { Dashboard().preferredColorScheme(.dark) } }
+}
+
+private enum IntelPage: String, CaseIterable, Identifiable {
+    case command = "COMMAND"
+    case identity = "PLAYER"
+    case analytics = "ANALYTICS"
+    case archive = "HISTORY"
+    var id: String { rawValue }
+    var iconName: String {
+        switch self {
+        case .command: return "scope"
+        case .identity: return "person.crop.square.fill"
+        case .analytics: return "chart.xyaxis.line"
+        case .archive: return "clock.arrow.circlepath"
+        }
+    }
 }
 
 private enum HistoryPeriod: String, CaseIterable, Identifiable {
@@ -174,6 +238,7 @@ private struct Dashboard: View {
     @State private var draftUID = ""
     @State private var period: HistoryPeriod = .all
     @State private var projectedXP = 50
+    @State private var selectedPage: IntelPage = .command
 
     private let legendary = 8001
     private var connected: Bool { consent && RankStore.validUID(uid) }
@@ -193,13 +258,26 @@ private struct Dashboard: View {
                 VStack(alignment: .leading, spacing: 19) {
                     header
                     if connected {
+                        intelNavigation
                         if let player = store.player {
-                            hero(player)
-                            overview
-                            climb
-                            trends
-                            goalCalculator
-                            history
+                            switch selectedPage {
+                            case .command:
+                                hero(player)
+                                overview
+                                climb
+                                goalCalculator
+                            case .identity:
+                                identityPanel(player)
+                                providerPanel(player)
+                            case .analytics:
+                                trends
+                                historySummary
+                                overview
+                            case .archive:
+                                historyArchive
+                                history
+                                providerPanel(player)
+                            }
                         } else {
                             HStack(spacing: 12) {
                                 ProgressView().tint(Theme.yellow)
@@ -211,7 +289,7 @@ private struct Dashboard: View {
                         Label(error, systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote).foregroundStyle(Theme.orange).card()
                     }
-                    Text("FAN PROJECT / READ-ONLY INTELLIGENCE • Unofficial provider. No background polling.")
+                    Text("FAN PROJECT • ONE APP FOR AVAILABLE LIVE STATS + LOCAL XP HISTORY • Unofficial provider.")
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(Theme.secondary).padding(.horizontal, 4)
                         .padding(.bottom, 22)
@@ -234,6 +312,34 @@ private struct Dashboard: View {
             }
             .sheet(isPresented: $showSettings) { settings }
         }
+    }
+
+    private var intelNavigation: some View {
+        HStack(spacing: 6) {
+            ForEach(IntelPage.allCases) { page in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.22)) { selectedPage = page }
+                } label: {
+                    VStack(spacing: 7) {
+                        Image(systemName: page.iconName)
+                            .font(.system(size: 17, weight: .bold))
+                        Text(page.rawValue)
+                            .font(.system(size: 9, weight: .black, design: .monospaced))
+                            .minimumScaleFactor(0.7).lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .foregroundStyle(selectedPage == page ? Theme.ink : Theme.secondary)
+                    .background(selectedPage == page ? Theme.yellow : Theme.elevated,
+                                in: RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Show \(page.rawValue.lowercased()) dashboard")
+            }
+        }
+        .padding(5)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.yellow.opacity(0.25)))
     }
 
     private var header: some View {
@@ -410,7 +516,7 @@ private struct Dashboard: View {
                     Image(systemName: "clock.arrow.circlepath")
                     Text("Last fetched: \(player.checkedAt.formatted(date: .abbreviated, time: .shortened))")
                     Spacer()
-                    Text("V0.3")
+                    Text("V0.4")
                 }
                 .font(.system(size: 9, weight: .medium, design: .monospaced))
                 .foregroundStyle(Theme.secondary)
@@ -725,7 +831,7 @@ private struct Dashboard: View {
                     Text("The service is unofficial and its availability and authorization are not guaranteed. It receives your UID and IP when you sync. No background polling or game modification.")
                     Link("Activision Terms", destination: URL(string: "https://www.activision.com/legal/terms-of-use")!)
                 }
-                Section("Version") { Text("CODM Rank Tracker v0.3.0") }
+                Section("Version") { Text("CODM Rank Tracker v0.4.0") }
             }
             .navigationTitle("Tracker Settings")
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { showSettings = false } } }
