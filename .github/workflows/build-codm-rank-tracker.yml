@@ -33,12 +33,12 @@ jobs:
           test -f "$APP/CODMRank"
           mkdir -p dist/Payload
           cp -R "$APP" dist/Payload/CODMRank.app
-          (cd dist && zip -qry CODM-Rank-Tracker-v0.1.1-unsigned.ipa Payload)
-          unzip -t dist/CODM-Rank-Tracker-v0.1.1-unsigned.ipa
-          test -s dist/CODM-Rank-Tracker-v0.1.1-unsigned.ipa
+          (cd dist && zip -qry CODM-Rank-Tracker-v0.2.0-unsigned.ipa Payload)
+          unzip -t dist/CODM-Rank-Tracker-v0.2.0-unsigned.ipa
+          test -s dist/CODM-Rank-Tracker-v0.2.0-unsigned.ipa
       - name: Upload compiled IPA
         uses: actions/upload-artifact@v4
         with:
-          name: CODM-Rank-Tracker-v0.1.1-unsigned
-          path: codm-rank-tracker/dist/CODM-Rank-Tracker-v0.1.1-unsigned.ipa
+          name: CODM-Rank-Tracker-v0.2.0-unsigned
+          path: codm-rank-tracker/dist/CODM-Rank-Tracker-v0.2.0-unsigned.ipa
           if-no-files-found: error
