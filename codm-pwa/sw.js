@@ -1,6 +1,6 @@
 // Minimal offline shell. Do not intercept API lookups or cache other players' stats.
-const CACHE="rankcommand-static-v10";
-const ASSETS=["/","/index.html","/style.css","/app.js","/icon.svg","/manifest.webmanifest"];
+const CACHE="rankcommand-static-v11";
+const ASSETS=["/","/index.html","/style.css","/app.js","/progression.js","/icon.svg","/manifest.webmanifest"];
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));
   self.skipWaiting();
