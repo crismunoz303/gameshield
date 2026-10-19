@@ -71,10 +71,29 @@ jobs:
           assert.ok(css.includes('.source-details'));
           assert.ok(css.includes('padding-top:max(76px'));
           assert.ok(css.includes('.tabs.dock-retracted'));
+          for(const id of ['avatar','avatarFallback','chooseAvatarBtn','clearAvatarBtn','avatarFile','avatarSource'])
+            assert.ok(html.includes('id="'+id+'"'),'missing avatar '+id);
+          assert.ok(html.includes('NO<br>AVATAR'));
+          assert.ok(js.includes('displayPlayerAvatar()'));
+          assert.ok(js.includes('function saveLocalAvatar(file)'));
+          assert.ok(js.includes('localStorage.setItem(STORAGE_PREFIX+uidKey("avatar")'));
+          assert.ok(js.includes('displayArt("avatar","avatarFallback",player.pic)'));
+          assert.ok(css.includes('-webkit-user-select:none'));
+          const vm=require('node:vm');
+          const proxySource=fs.readFileSync('codm-pwa/api/player.js','utf8');
+          const sandbox={URL,module:{exports:{}}};
+          vm.runInNewContext(proxySource+';this.checkAvatarPicture=picture;',sandbox);
+          assert.equal(sandbox.checkAvatarPicture('https://randomuser.me/api/portraits/men/42.jpg',true),
+            'https://randomuser.me/api/portraits/men/42.jpg');
+          assert.equal(sandbox.checkAvatarPicture('https://randomuser.me/avatar.jpg',false),null);
+          assert.equal(sandbox.checkAvatarPicture('http://example.com/a.jpg',true),null);
+          assert.equal(sandbox.checkAvatarPicture('https://localhost/avatar.jpg',true),null);
+          assert.equal(sandbox.checkAvatarPicture('https://127.0.0.1/avatar.jpg',true),null);
+          assert.ok(proxySource.includes('pic:picture(source.pic,true)'));
           assert.ok(js.includes('accumulatedDockTravel'));
           assert.ok(js.includes('showNavigationDock()'));
           assert.ok(js.includes('document.documentElement.scrollTop=0'));
           assert.ok(sw.includes('/progression.js'));
-          assert.ok(sw.includes('rankcommand-static-v12'));
+          assert.ok(sw.includes('rankcommand-static-v13'));
           console.log('PASS: all seven ranks, GM checkpoints, original artwork, UID safety, backup controls, responsive styling');
           NODE
