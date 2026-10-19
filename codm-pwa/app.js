@@ -150,18 +150,8 @@ function render(){
   safeText("liveBadge","LAST READING");
   safeText("lastCheck",new Date(player.checkedAt).toLocaleString(undefined,{hour:"numeric",minute:"2-digit"}));
   displayArt("rankArt","badgeUnavailable",player.rankArt);
-  const glowForRank = (rank) => {
-    const s=String(rank||"").toLowerCase().replace(/[\s_-]+/g," ");
-    if(s.includes("legendary"))return "#ff8d49";
-    if(s.includes("grand master"))return "#ffca55";
-    if(s.includes("master"))return "#bd9eff";
-    if(s.includes("pro"))return "#85b4ff";
-    if(s.includes("elite"))return "#65dbec";
-    if(s.includes("veteran"))return "#bbc7d1";
-    if(s.includes("rookie"))return "#e5b587";
-    return "#d8b669";
-  };
-  $("interactiveRank").style.setProperty("--rank-glow",glowForRank(player.rank));
+  // Red lighting is UI-only; the original rank PNG is never recolored.
+  $("interactiveRank").style.setProperty("--rank-glow","#f04452");
   $("interactiveRank").setAttribute("aria-label","Original "+player.rank+" COD Mobile badge; tap to toggle glow");
   const last=readings.length>1?deltaAt(readings.length-1):null;
   safeText("mDelta",signed(last));
@@ -276,8 +266,8 @@ function drawChart(){
   ctx.textAlign="left";ctx.fillText(new Date(t0).toLocaleDateString(),margin.left,h-7);
   ctx.textAlign="right";ctx.fillText(new Date(t1).toLocaleDateString(),w-margin.right,h-7);
   ctx.beginPath();selected.forEach((x,i)=>{const a=atX(x.timestamp),b=atY(x.xp);i?ctx.lineTo(a,b):ctx.moveTo(a,b)});
-  ctx.strokeStyle="#ffc547";ctx.lineWidth=3;ctx.lineJoin="round";ctx.stroke();
-  selected.forEach(x=>{ctx.beginPath();ctx.arc(atX(x.timestamp),atY(x.xp),3.5,0,Math.PI*2);ctx.fillStyle="#ffd66d";ctx.fill()});
+  ctx.strokeStyle="#f04452";ctx.lineWidth=3;ctx.lineJoin="round";ctx.stroke();
+  selected.forEach(x=>{ctx.beginPath();ctx.arc(atX(x.timestamp),atY(x.xp),3.5,0,Math.PI*2);ctx.fillStyle="#ff8490";ctx.fill()});
 }
 function csvText(){
   const q=s=>'"'+String(s).replaceAll('"','""')+'"';
