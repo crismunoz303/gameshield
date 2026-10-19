@@ -28,7 +28,22 @@
   </header>
   <div class="networkstate" id="netStatus"><span class="network-label">NET</span><span class="beacon"></span><span id="netMessage">Ready to connect</span><span id="lastCheck"></span></div>
   <main>
-    <section id="connectPanel" class="card connect-card">
+    <section id="dashboard" hidden>
+      <section class="pane active" id="pane-command">
+        <div class="screen-intro"><div class="overline">CALL OF DUTY: MOBILE COMPANION</div><h1>Your <span>Command Center</span></h1><p>Weapon builds, blueprint library and your Multiplayer rank.</p></div>
+        <div class="home-hub">
+          <div class="hub-section-title"><strong>Discover</strong><span>COD MOBILE</span></div>
+          <div class="hub-links">
+            <button type="button" data-go="meta" class="hub-link"><span class="hub-link-icon">⌁</span><strong>Loadouts</strong><small>Browse published builds</small><i>↗</i></button>
+            <button type="button" data-go="blueprints" class="hub-link"><span class="hub-link-icon">◈</span><strong>Blueprints</strong><small>Explore official releases</small><i>↗</i></button>
+            <button type="button" data-go="analytics" class="hub-link"><span class="hub-link-icon">⌗</span><strong>Rank Stats</strong><small>Saved Multiplayer readings</small><i>↗</i></button>
+          </div>
+          <div class="hub-section-title hub-latest"><strong>Featured loadouts</strong><button type="button" data-go="meta">See all ↗</button></div>
+          <div id="homeLoadouts" class="hub-preview-list"></div>
+          <div class="hub-section-title hub-latest"><strong>Blueprint library</strong><button type="button" data-go="blueprints">Browse ↗</button></div>
+          <div id="homeBlueprints" class="hub-preview-list"></div>
+        </div>
+        <section id="connectPanel" class="card connect-card">
       <div class="connect-prelude"><span>RC // MULTIPLAYER</span><span>CONNECT A PLAYER</span></div>
       <div class="section-eyebrow">MULTIPLAYER // ACCESS TERMINAL</div>
       <h1>KNOW YOUR<br><span class="accent-word">RANK.</span></h1>
@@ -42,9 +57,8 @@
       </form>
       <p class="small" id="consentNote">This independent fan project isn't affiliated with Activision. The provider may log your UID and IP address. Online stats depend on its availability and authorized access.</p>
     </section>
-    <section id="dashboard" hidden>
-      <section class="pane active" id="pane-command">
-        <div class="screen-intro"><div class="overline">HQ // MULTIPLAYER OPERATIONS</div><h1>RANKED <span>HQ</span></h1><p>PROVIDER-REPORTED RANK / RATING</p></div>
+        <div id="homePlayerData" hidden>
+        <div class="hub-section-title rank-headline"><strong>Your Multiplayer rank</strong><button type="button" data-go="player">View profile ↗</button></div>
         <div class="hero card">
           <div class="hero-top"><span><i class="tiny-gold"></i> OPERATION: RANKED <em>// MP-01</em></span><span class="live" id="liveBadge">SAVED</span></div>
           <div class="identity-row">
@@ -76,9 +90,10 @@
             <article class="metric purple"><small>BEST RECORDED XP</small><strong id="mBest">—</strong><span>Highest saved reading</span></article>
           </div>
         </section>
+        </div>
       </section>
       <section class="pane" id="pane-player">
-        <div class="screen-intro"><div class="overline">DOSSIER // PLAYER INFORMATION</div><h1>OPERATOR <span>FILE</span></h1><p>PROVIDER-REPORTED PROFILE FIELDS / READ-ONLY</p></div>
+        <div class="screen-intro"><div class="overline">YOUR ACCOUNT</div><h1>Player <span>Profile</span></h1><p>Profile returned by your linked player-data service.</p></div>
         <section class="card">
           <div class="section-label"><b>01 / OPERATOR FILE</b><small>Identity returned by the third-party provider</small></div>
           <div class="profile-hero">
@@ -107,7 +122,9 @@
         </details>
       </section>
       <section class="pane" id="pane-analytics">
-        <div class="screen-intro"><div class="overline">INTEL // RATING TELEMETRY</div><h1>RANK <span>INTEL</span></h1><p>LOCAL OBSERVATIONS / NO FABRICATED MATCH DATA</p></div>
+        <div class="screen-intro"><div class="overline">YOUR ACTIVITY</div><h1>Rank <span>Stats</span></h1><p>Progress calculated from saved account readings.</p></div>
+        <button type="button" id="viewHistoryBtn" class="view-history">↗ View saved reading history <span>↗</span></button>
+        <p class="guest-prompt" id="statsGuest" hidden>Connect a player on the Home tab to see recorded Multiplayer rating history.</p>
         <div class="intel-hud"><div><small>LAST SAVED RATING</small><strong id="intelCurrent">—</strong></div><div><small>NET TRACKED CHANGE</small><strong id="intelDelta">—</strong></div><div class="intel-hud-foot"><span>MP // ANALYTICS</span><span id="intelSamples">0 READINGS</span></div></div>
         <section class="card">
           <div class="section-label"><b>01 / RATING TELEMETRY</b><small>Differences between stored readings</small></div>
@@ -118,7 +135,8 @@
         </section>
       </section>
       <section class="pane" id="pane-history">
-        <div class="screen-intro"><div class="overline">SYNC // RECON ARCHIVE</div><h1>SYNC <span>LOG</span></h1><p>LOCAL RANK READINGS / EXPORTABLE</p></div>
+        <div class="screen-intro"><div class="overline">STATS / READING HISTORY</div><h1>Reading <span>History</span></h1><p>Locally saved observations for the connected UID.</p></div>
+        <button type="button" class="back-link" id="backToStatsBtn">← Back to Stats</button>
         <div class="log-summary"><span>ACCOUNT SYNC RECORD</span><strong id="logCount">0</strong><span>OBSERVED READINGS</span></div>
         <section class="card">
           <div class="section-label"><b>01 / SESSION LOG</b><small>Local, exportable rank history</small></div>
@@ -132,17 +150,17 @@
         </section>
       </section>
       <section class="pane" id="pane-meta">
-        <div class="screen-intro"><div class="overline">WEAPONS // EVIDENCE DATABASE</div><h1>WEAPON <span>INTEL</span></h1><p>ATTRIBUTED GUNSMITH BUILDS / OFFICIALLY ANNOUNCED BLUEPRINTS</p></div>
-        <div class="weapon-modes" role="group" aria-label="Weapon intel sections">
-          <button class="selected" id="modeGunsmith" type="button" aria-pressed="true">GUNSMITH</button>
-          <button id="modeBlueprints" type="button" aria-pressed="false">BLUEPRINTS</button>
-        </div>
+        <div class="screen-intro"><div class="overline">COD MOBILE / MULTIPLAYER</div><h1>Weapon <span>Loadouts</span></h1><p>Five-slot builds with linked sources.</p></div>
         <div id="metaGunsmith">
+        <div id="metaBrowser">
         <div class="meta-season"><span>ACTIVE GAME SEASON</span><strong id="metaSeason">SEASON 9</strong><small>BUILDS REVIEWED 19 OCT 2026</small>
           <a id="metaOfficial" href="https://www.callofduty.com/blog/2026/10/call-of-duty-mobile-season-9-vampires-werewolves" target="_blank" rel="noopener noreferrer">OFFICIAL SEASON NOTES ↗</a>
         </div>
         <section class="meta-browser" aria-label="COD Mobile gunsmith builds">
-          <div class="section-label"><b>01 / DOCUMENTED ATTACHMENTS</b><small>NOT AN INDEPENDENT META RANKING</small></div>
+          <div class="library-header"><strong>Explore weapons</strong><span id="loadoutCount"></span></div>
+          <label for="loadoutSearch" class="browse-label">Search weapons</label>
+          <input type="search" id="loadoutSearch" class="library-search" placeholder="Search a weapon or build" autocomplete="off">
+          <div class="section-label"><b>Browse by class</b><small>MULTIPLAYER</small></div>
           <div class="meta-filters" role="group" aria-label="Weapon category">
             <button type="button" data-meta-filter="ALL" class="selected" aria-pressed="true">ALL</button>
             <button type="button" data-meta-filter="AR" aria-pressed="false">ASSAULT</button>
@@ -150,7 +168,9 @@
           </div>
           <div id="metaWeapons" class="meta-weapons" aria-label="Source-backed loadouts"></div>
         </section>
-        <section class="meta-detail" id="metaDetail" aria-live="polite">
+</div>
+        <section class="meta-detail" id="metaDetail" aria-live="polite" hidden>
+          <button type="button" id="backLoadoutBtn" class="back-link">← All Loadouts</button>
           <div class="meta-detail-head"><div><small id="metaWeaponClass">WEAPON CLASS</small><h2 id="metaWeaponName">SELECT WEAPON</h2><span id="metaWeaponRole">—</span></div></div>
           <div class="meta-attachment-title">GUNSMITH // FIVE ATTACHMENT SLOTS</div>
           <div id="metaAttachments" class="meta-attachments"></div>
@@ -160,7 +180,10 @@
         </section>
         <p class="small meta-footnote">Five attachment names are reproduced from their linked published sources. Open the source to review the documented build.</p>
         </div>
-        <div id="metaBlueprints" hidden>
+      </section>
+      <section class="pane" id="pane-blueprints">
+        <div class="screen-intro"><div class="overline">COD MOBILE / COLLECTION</div><h1>Weapon <span>Blueprints</span></h1><p>Officially announced weapon blueprints.</p></div>
+        <div id="metaBlueprints"><div id="blueprintBrowser">
           <div class="meta-season blueprint-heading">
             <span>OFFICIAL BLUEPRINT ANNOUNCEMENTS</span>
             <strong>OFFICIAL BLUEPRINT ARCHIVE</strong>
@@ -177,20 +200,23 @@
           </div>
           <p class="blueprint-result-count" id="blueprintCount"></p>
           <div id="blueprintList" class="blueprint-list"></div>
+
+          <p class="small">Names and explicitly identified rarities from official Call of Duty announcements.</p>
+        </div>
+        </div>
           <section id="blueprintDetail" class="blueprint-detail" hidden aria-live="polite">
+            <button type="button" id="backBlueprintBtn" class="back-link">← All Blueprints</button>
             <div class="blueprint-detail-row"><div><small id="blueprintSeason">—</small><h2 id="blueprintTitle">—</h2><strong id="blueprintRarity" hidden></strong></div></div>
             <div class="blueprint-fact"><span>HOW IT WAS ANNOUNCED</span><strong id="blueprintRelease">—</strong></div>
             <a id="blueprintSource" class="blueprint-source-button" href="#" target="_blank" rel="noopener noreferrer">READ OFFICIAL ANNOUNCEMENT ↗</a>
           </section>
-          <p class="small">Names and explicitly identified rarities from official Call of Duty announcements.</p>
-        </div>
       </section>
-      <nav class="tabs" aria-label="Dashboard sections">
-        <button data-tab="command" class="active" aria-current="page" aria-label="Multiplayer HQ"><span>⌖</span>HQ</button>
-        <button data-tab="player" aria-label="Operator File"><span>▣</span>OPERATOR</button>
-        <button data-tab="analytics" aria-label="Rank Intel"><span>▥</span>INTEL</button>
-        <button data-tab="history" aria-label="Sync Log"><span>≡</span>LOG</button>
-        <button data-tab="meta" aria-label="Weapon Archive"><span>⌁</span>ARMORY</button>
+      <nav class="tabs" aria-label="Main app navigation">
+        <button data-tab="command" class="active" aria-current="page" aria-label="Home"><span>⌂</span>HOME</button>
+        <button data-tab="meta" aria-label="Loadouts"><span>⌁</span>LOADOUTS</button>
+        <button data-tab="blueprints" aria-label="Blueprints"><span>◈</span>BLUEPRINTS</button>
+        <button data-tab="analytics" aria-label="Rank Stats"><span>▥</span>STATS</button>
+        <button data-tab="player" aria-label="Player Profile"><span>◉</span>PROFILE</button>
       </nav>
     </section>
     <div id="notice" role="status" aria-live="polite" hidden></div>
