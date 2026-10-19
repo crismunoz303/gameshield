@@ -44,7 +44,7 @@
     </section>
     <section id="dashboard" hidden>
       <section class="pane active" id="pane-command">
-        <div class="screen-intro"><div class="overline">HQ // MULTIPLAYER OPERATIONS</div><h1>RANKED <span>HQ</span></h1><p>PROVIDER-REPORTED RATING / HISTORICAL BENCHMARKS</p></div>
+        <div class="screen-intro"><div class="overline">HQ // MULTIPLAYER OPERATIONS</div><h1>RANKED <span>HQ</span></h1><p>PROVIDER-REPORTED RANK / RATING</p></div>
         <div class="hero card">
           <div class="hero-top"><span><i class="tiny-gold"></i> OPERATION: RANKED <em>// MP-01</em></span><span class="live" id="liveBadge">SAVED</span></div>
           <div class="identity-row">
@@ -62,7 +62,7 @@
           <div class="hero-divider"><span></span></div>
           <div class="progress-head confirmed-rating">
             <div><small>LAST REPORTED MULTIPLAYER RATING</small><strong id="currentXP">—</strong></div>
-            <div class="progress-goal"><small>ACCOUNT SOURCE</small><b>CODM</b></div>
+            <div class="progress-goal"><small>PLAYER LOOKUP</small><b>UID</b></div>
           </div>
           <p class="small metric-context">Rank and rating from the linked player-data service.</p>
           <button class="primary full" id="refreshBtn"><span class="refresh-indicator">↻</span> REFRESH ACCOUNT DATA <span>↗</span></button>
@@ -190,14 +190,13 @@
         <button data-tab="player" aria-label="Operator File"><span>▣</span>OPERATOR</button>
         <button data-tab="analytics" aria-label="Rank Intel"><span>▥</span>INTEL</button>
         <button data-tab="history" aria-label="Sync Log"><span>≡</span>LOG</button>
-        <button data-tab="meta" aria-label="Meta Loadouts"><span>⌁</span>META</button>
+        <button data-tab="meta" aria-label="Weapon Archive"><span>⌁</span>ARMORY</button>
       </nav>
     </section>
     <div id="notice" role="status" aria-live="polite" hidden></div>
   </main>
   
 </div>
-<script defer src="/progression.js"></script>
 <script defer src="/meta.js"></script>
 <script defer src="/blueprints.js"></script>
 <script defer src="/app.js"></script>
