@@ -144,7 +144,7 @@ function showTab(tab){
     document.body.scrollTop=0;
     requestAnimationFrame(()=>window.scrollTo(0,0));
   }
-  if(tab==="analytics")requestAnimationFrame(drawChart);
+  if(tab==="analytics"){$("statsGuest").hidden=!!player;requestAnimationFrame(drawChart)}
   if(tab==="meta")renderMeta();
   if(tab==="blueprints")renderBlueprints();
   if(tab==="command")renderHomeDiscover();
@@ -470,21 +470,48 @@ window.addEventListener("scroll",()=>{
 
 
 const BLUEPRINTS=window.RankBlueprints;
-let weaponMode="gunsmith", blueprintFilter="ALL", blueprintQuery="", blueprintActiveId=null;
-function switchWeaponMode(mode){
-  weaponMode=mode==="blueprints"?"blueprints":"gunsmith";
-  $("metaGunsmith").hidden=weaponMode!=="gunsmith";
-  $("metaBlueprints").hidden=weaponMode!=="blueprints";
-  for(const [id,key] of [["modeGunsmith","gunsmith"],["modeBlueprints","blueprints"]]){
-    const active=key===weaponMode,b=$(id);
-    b.classList.toggle("selected",active);
-    b.setAttribute("aria-pressed",String(active));
-  }
-  if(weaponMode==="blueprints")renderBlueprints();
-  else renderMeta();
+let blueprintFilter="ALL",blueprintQuery="",blueprintActiveId=null,blueprintDetailOpen=false;
+let metaQuery="",metaDetailOpen=false;
+function renderHomeDiscover(){
+  const loadouts=$("homeLoadouts"),blueprints=$("homeBlueprints");
+  if(!loadouts||!blueprints||!window.RankMeta||!BLUEPRINTS)return;
+  loadouts.replaceChildren();blueprints.replaceChildren();
+  META.entries.slice(0,3).forEach(entry=>{
+    const b=document.createElement("button");b.type="button";b.className="home-preview";
+    const tag=document.createElement("span");tag.className="preview-glyph";tag.textContent=entry.class;
+    const stack=document.createElement("span");stack.className="preview-label";
+    const title=document.createElement("strong");title.textContent=entry.name;
+    const sub=document.createElement("small");sub.textContent=entry.role;
+    stack.append(title,sub);
+    const arrow=document.createElement("span");arrow.className="preview-arrow";arrow.textContent="↗";
+    b.append(tag,stack,arrow);
+    b.addEventListener("click",()=>{
+      metaFilter="ALL";metaQuery="";metaActiveId=entry.id;metaDetailOpen=true;
+      $("loadoutSearch").value="";
+      showTab("meta");
+    });
+    loadouts.append(b);
+  });
+  BLUEPRINTS.slice(0,4).forEach(entry=>{
+    const b=document.createElement("button");b.type="button";b.className="home-preview";
+    const tag=document.createElement("span");tag.className="preview-glyph blueprint-glyph";tag.textContent="◈";
+    const stack=document.createElement("span");stack.className="preview-label";
+    const title=document.createElement("strong");title.textContent=entry.weapon+" — "+entry.blueprint;
+    const sub=document.createElement("small");sub.textContent=entry.rarity?entry.rarity+" · "+entry.season:entry.season;
+    stack.append(title,sub);
+    const arrow=document.createElement("span");arrow.className="preview-arrow";arrow.textContent="↗";
+    b.append(tag,stack,arrow);
+    b.addEventListener("click",()=>{
+      blueprintFilter="ALL";blueprintQuery="";blueprintActiveId=entry.id;blueprintDetailOpen=true;
+      $("blueprintSearch").value="";
+      showTab("blueprints");
+    });
+    blueprints.append(b);
+  });
 }
 function renderBlueprints(){
   const list=$("blueprintList");list.replaceChildren();
+  $("blueprintBrowser").hidden=blueprintDetailOpen;
   const q=blueprintQuery.trim().toLowerCase();
   const matches=BLUEPRINTS.filter(x=>
     (blueprintFilter==="ALL"||x.rarity===blueprintFilter)&&
@@ -513,11 +540,11 @@ function renderBlueprints(){
     const season=document.createElement("small");season.textContent=entry.season+" / OFFICIAL";
     if(entry.rarity)b.append(rarity);
     b.append(weapon,title,season);
-    b.addEventListener("click",()=>{blueprintActiveId=entry.id;renderBlueprints()});
+    b.addEventListener("click",()=>{blueprintActiveId=entry.id;blueprintDetailOpen=true;renderBlueprints();window.scrollTo(0,0)});
     list.append(b);
   });
   const selected=matches.find(x=>x.id===blueprintActiveId);
-  $("blueprintDetail").hidden=false;
+  $("blueprintDetail").hidden=!blueprintDetailOpen;
   safeText("blueprintTitle",selected.weapon+" — "+selected.blueprint);
   safeText("blueprintSeason",selected.season+" / VERIFIED ANNOUNCEMENT");
   $("blueprintRarity").hidden=!selected.rarity;
@@ -525,11 +552,10 @@ function renderBlueprints(){
   safeText("blueprintRelease",selected.release);
   $("blueprintSource").href=selected.sourceUrl;
 }
-$("modeGunsmith").addEventListener("click",()=>switchWeaponMode("gunsmith"));
-$("modeBlueprints").addEventListener("click",()=>switchWeaponMode("blueprints"));
-$("blueprintSearch").addEventListener("input",event=>{blueprintQuery=event.target.value;renderBlueprints()});
+$("backBlueprintBtn").addEventListener("click",()=>{blueprintDetailOpen=false;renderBlueprints()});
+$("blueprintSearch").addEventListener("input",event=>{blueprintQuery=event.target.value;blueprintDetailOpen=false;renderBlueprints()});
 document.querySelectorAll("[data-blueprint-filter]").forEach(button=>button.addEventListener("click",()=>{
-  blueprintFilter=button.dataset.blueprintFilter;renderBlueprints();
+  blueprintFilter=button.dataset.blueprintFilter;blueprintDetailOpen=false;renderBlueprints();
 }));
 
 // Gunsmith information is editorial, NOT read from the player's CODM account.
@@ -541,8 +567,15 @@ function renderMeta(){
   if(!META)return;
   safeText("metaSeason",META.season.label);
   const root=$("metaWeapons");root.replaceChildren();
-  const builds=META.entries.filter(x=>metaFilter==="ALL"||x.class===metaFilter);
-  if(!builds.length)return;
+  const builds=META.entries.filter(x=>(metaFilter==="ALL"||x.class===metaFilter)&&(!metaQuery||((x.name+" "+x.role).toLowerCase().includes(metaQuery))));
+  $("metaBrowser").hidden=metaDetailOpen;
+  $("metaDetail").hidden=!metaDetailOpen;
+  safeText("loadoutCount",builds.length+" published builds");
+  if(!builds.length){
+    $("metaDetail").hidden=true;
+    const empty=document.createElement("p");empty.className="browse-empty";
+    empty.textContent="No matching published builds.";root.append(empty);return;
+  }
   if(!builds.some(x=>x.id===metaActiveId))metaActiveId=builds[0].id;
   builds.forEach(x=>{
     const item=document.createElement("button");item.type="button";
@@ -555,7 +588,7 @@ function renderMeta(){
     info.append(title,role);
     const arrow=document.createElement("span");arrow.className="meta-weapon-arrow";arrow.textContent="↗";
     item.append(left,info,arrow);
-    item.addEventListener("click",()=>{metaActiveId=x.id;renderMeta()});
+    item.addEventListener("click",()=>{metaActiveId=x.id;metaDetailOpen=true;renderMeta();window.scrollTo(0,0)});
     root.append(item);
   });
   const build=builds.find(x=>x.id===metaActiveId);
@@ -581,8 +614,12 @@ function renderMeta(){
   });
 }
 document.querySelectorAll("[data-meta-filter]").forEach(button=>{
-  button.addEventListener("click",()=>{metaFilter=button.dataset.metaFilter;renderMeta()});
+  button.addEventListener("click",()=>{metaFilter=button.dataset.metaFilter;metaDetailOpen=false;renderMeta()});
 });
+$("loadoutSearch").addEventListener("input",event=>{
+  metaQuery=event.target.value.trim().toLowerCase();metaDetailOpen=false;renderMeta();
+});
+$("backLoadoutBtn").addEventListener("click",()=>{metaDetailOpen=false;renderMeta()});
 $("metaCopy").addEventListener("click",async()=>{
   const b=META.entries.find(x=>x.id===metaActiveId);
   if(!b)return;
@@ -593,6 +630,9 @@ $("metaCopy").addEventListener("click",async()=>{
   catch{note("Copy unavailable in this browser.")}
 });
 
+document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.go)));
+$("viewHistoryBtn").addEventListener("click",()=>showTab("history"));
+$("backToStatsBtn").addEventListener("click",()=>showTab("analytics"));
 document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
 document.querySelectorAll("[data-range]").forEach(b=>b.addEventListener("click",()=>{
   range=b.dataset.range;document.querySelectorAll("[data-range]").forEach(x=>x.classList.toggle("selected",x===b));drawChart()
