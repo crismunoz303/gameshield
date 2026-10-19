@@ -1,0 +1,44 @@
+name: CODM Rank Tracker - unsigned IPA
+on:
+  push:
+    branches: [codm-rank-tracker]
+    paths:
+      - 'codm-rank-tracker/**'
+      - '.github/workflows/build-codm-rank-tracker.yml'
+  workflow_dispatch:
+jobs:
+  build-unsigned-ipa:
+    runs-on: macos-15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout tracker branch
+        uses: actions/checkout@v4
+      - name: Install project generator
+        run: |
+          brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: codm-rank-tracker
+        run: xcodegen generate --spec project.yml
+      - name: Compile native iOS app
+        working-directory: codm-rank-tracker
+        run: |
+          set -euo pipefail
+          xcodebuild -project CODMRank.xcodeproj -scheme CODMRank -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath "$PWD/build/Derived" CODE_SIGNING_ALLOWED=NO build | tee /tmp/codm-build.log
+      - name: Package IPA and verify contents
+        working-directory: codm-rank-tracker
+        run: |
+          set -euo pipefail
+          APP="build/Derived/Build/Products/Release-iphoneos/CODMRank.app"
+          test -f "$APP/CODMRank"
+          mkdir -p dist/Payload
+          cp -R "$APP" dist/Payload/CODMRank.app
+          (cd dist && zip -qry CODM-Rank-Tracker-v0.1.1-unsigned.ipa Payload)
+          unzip -t dist/CODM-Rank-Tracker-v0.1.1-unsigned.ipa
+          test -s dist/CODM-Rank-Tracker-v0.1.1-unsigned.ipa
+      - name: Upload compiled IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: CODM-Rank-Tracker-v0.1.1-unsigned
+          path: codm-rank-tracker/dist/CODM-Rank-Tracker-v0.1.1-unsigned.ipa
+          if-no-files-found: error
