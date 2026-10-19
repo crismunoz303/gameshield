@@ -1,12 +1,19 @@
 import SwiftUI
 import Charts
 
-private enum Palette {
-    static let background = Color(red: 0.045, green: 0.055, blue: 0.08)
-    static let panel = Color(red: 0.11, green: 0.13, blue: 0.17)
-    static let gold = Color(red: 1.0, green: 0.78, blue: 0.25)
-    static let muted = Color(red: 0.68, green: 0.72, blue: 0.78)
+// CODM Rank Tracker v0.2.0 — rank and XP are read-only, sourced from an unofficial service.
+private enum Theme {
+    static let ink = Color(red: 0.032, green: 0.041, blue: 0.066)
+    static let card = Color(red: 0.090, green: 0.114, blue: 0.158)
+    static let elevated = Color(red: 0.125, green: 0.157, blue: 0.204)
+    static let yellow = Color(red: 1.00, green: 0.766, blue: 0.251)
+    static let orange = Color(red: 1.00, green: 0.49, blue: 0.20)
+    static let green = Color(red: 0.35, green: 0.92, blue: 0.68)
+    static let red = Color(red: 1.00, green: 0.42, blue: 0.46)
+    static let secondary = Color(red: 0.63, green: 0.70, blue: 0.78)
+    static let line = Color.white.opacity(0.11)
 }
+
 private struct RemoteLevel: Decodable { let current: Int? }
 private struct RemoteRank: Decodable {
     let multiplayerRank: String?
@@ -31,29 +38,50 @@ private struct Point: Codable, Identifiable {
     let xp: Int
     let rank: String
 }
+private struct Change: Identifiable {
+    let id: UUID
+    let date: Date
+    let xp: Int
+    let difference: Int
+    let rank: String
+}
+private struct Tier: Identifiable {
+    let title: String
+    let shortName: String
+    let threshold: Int
+    var id: Int { threshold }
+}
+private let rankTiers: [Tier] = [
+    Tier(title: "Grand Master II", shortName: "GM II", threshold: 6400),
+    Tier(title: "Grand Master III", shortName: "GM III", threshold: 6800),
+    Tier(title: "Grand Master IV", shortName: "GM IV", threshold: 7200),
+    Tier(title: "Grand Master V", shortName: "GM V", threshold: 7600),
+    Tier(title: "Legendary", shortName: "LEGEND", threshold: 8001)
+]
 
 @MainActor
-private final class RankState: ObservableObject {
+private final class RankStore: ObservableObject {
     @Published var player: Player?
     @Published var points: [Point] = []
     @Published var loading = false
     @Published var errorText: String?
-    private var loadedUID = ""
+    private var activeUID = ""
 
     func load(uid: String) {
-        loadedUID = uid
+        activeUID = uid
         errorText = nil
-        let defaults = UserDefaults.standard
-        player = defaults.data(forKey: "codm.player.\(uid)").flatMap { try? JSONDecoder().decode(Player.self, from: $0) }
-        points = defaults.data(forKey: "codm.history.\(uid)").flatMap { try? JSONDecoder().decode([Point].self, from: $0) } ?? []
+        let prefs = UserDefaults.standard
+        player = prefs.data(forKey: "codm.player.\(uid)").flatMap {
+            try? JSONDecoder().decode(Player.self, from: $0)
+        }
+        points = prefs.data(forKey: "codm.history.\(uid)").flatMap {
+            try? JSONDecoder().decode([Point].self, from: $0)
+        } ?? []
     }
 
     func refresh(uid: String) async {
         guard !loading else { return }
-        guard Self.validUID(uid) else {
-            errorText = "Enter your numeric COD Mobile UID."
-            return
-        }
+        guard Self.validUID(uid) else { errorText = "A numeric COD Mobile UID is required."; return }
         loading = true
         defer { loading = false }
         do {
@@ -62,27 +90,30 @@ private final class RankState: ObservableObject {
             request.setValue("application/json", forHTTPHeaderField: "Accept")
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
-                throw NSError(domain: "CODM", code: 1, userInfo: [NSLocalizedDescriptionKey: "Stats service returned an HTTP error."])
+                throw NSError(domain: "CODM", code: 1, userInfo: [NSLocalizedDescriptionKey: "The rank service returned an HTTP error."])
             }
-            guard data.count < 64000 else { throw NSError(domain: "CODM", code: 2, userInfo: [NSLocalizedDescriptionKey: "Unexpectedly large response."]) }
+            guard data.count < 64_000 else {
+                throw NSError(domain: "CODM", code: 2, userInfo: [NSLocalizedDescriptionKey: "Unexpected response size."])
+            }
             let remote = try JSONDecoder().decode(RemoteProfile.self, from: data)
             guard remote.success, let name = remote.nickname,
                   let rank = remote.rank?.multiplayerRank, let xp = remote.rank?.rating, xp >= 0 else {
-                throw NSError(domain: "CODM", code: 3, userInfo: [NSLocalizedDescriptionKey: "Stats were unavailable or their format changed."])
+                throw NSError(domain: "CODM", code: 3, userInfo: [NSLocalizedDescriptionKey: "Rank data is unavailable or its format changed."])
             }
-            guard loadedUID == uid else { return }
+            guard activeUID == uid else { return }
             let updated = Player(nickname: name, level: remote.level?.current, rank: rank, xp: xp, checkedAt: Date())
             player = updated
+            // Record changes, not individual matches. A delta can cover multiple games.
             if points.last?.xp != xp || points.last?.rank != rank {
                 points.append(Point(id: UUID(), date: updated.checkedAt, xp: xp, rank: rank))
-                if points.count > 500 { points.removeFirst(points.count - 500) }
+                if points.count > 1000 { points.removeFirst(points.count - 1000) }
             }
             let encoder = JSONEncoder()
             UserDefaults.standard.set(try encoder.encode(updated), forKey: "codm.player.\(uid)")
             UserDefaults.standard.set(try encoder.encode(points), forKey: "codm.history.\(uid)")
             errorText = nil
         } catch {
-            errorText = "Could not refresh: \(error.localizedDescription)"
+            errorText = "Live stats unavailable: \(error.localizedDescription). Showing the last saved reading."
         }
     }
 
@@ -90,9 +121,34 @@ private final class RankState: ObservableObject {
         (12...22).contains(uid.count) && uid.utf8.allSatisfy { (48...57).contains($0) }
     }
 
-    var lastChange: Int? {
-        guard points.count >= 2 else { return nil }
-        return points[points.count - 1].xp - points[points.count - 2].xp
+    var changes: [Change] {
+        guard points.count >= 2 else { return [] }
+        return (1..<points.count).map { index in
+            let now = points[index]
+            return Change(id: now.id, date: now.date, xp: now.xp,
+                          difference: now.xp - points[index - 1].xp, rank: now.rank)
+        }
+    }
+    var latestChange: Int? { changes.last?.difference }
+    var highXP: Int? { points.map(\.xp).max() }
+    var totalPositive: Int { changes.filter { $0.difference > 0 }.reduce(0) { $0 + $1.difference } }
+    var totalNegative: Int { changes.filter { $0.difference < 0 }.reduce(0) { $0 + $1.difference } }
+    var bestIncrease: Int? { changes.map(\.difference).filter { $0 > 0 }.max() }
+    var positiveAverage: Int? {
+        let positives = changes.filter { $0.difference > 0 }
+        guard !positives.isEmpty else { return nil }
+        return Int((Double(positives.reduce(0) { $0 + $1.difference }) / Double(positives.count)).rounded())
+    }
+    var todayNet: Int? {
+        let today = points.filter { Calendar.current.isDateInToday($0.date) }
+        guard today.count > 1, let first = today.first, let last = today.last else { return nil }
+        return last.xp - first.xp
+    }
+    var weekNet: Int? {
+        let cutoff = Date().addingTimeInterval(-7 * 24 * 3600)
+        let filtered = points.filter { $0.date >= cutoff }
+        guard filtered.count > 1, let first = filtered.first, let last = filtered.last else { return nil }
+        return last.xp - first.xp
     }
 }
 
@@ -101,171 +157,481 @@ struct CODMRankApp: App {
     var body: some Scene { WindowGroup { Dashboard().preferredColorScheme(.dark) } }
 }
 
+private enum HistoryPeriod: String, CaseIterable, Identifiable {
+    case week = "7 DAYS"
+    case all = "ALL"
+    var id: String { rawValue }
+}
+
 private struct Dashboard: View {
     @AppStorage("codm.uid") private var uid = ""
     @AppStorage("codm.consent") private var consent = false
-    @Environment(\.scenePhase) private var phase
-    @StateObject private var state = RankState()
-    @State private var draftUID = ""
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var store = RankStore()
     @State private var showSettings = false
+    @State private var draftUID = ""
+    @State private var period: HistoryPeriod = .all
+    @State private var projectedXP = 50
 
-    private let legendaryXP = 8001
-    private var connected: Bool { consent && RankState.validUID(uid) }
-    private var xp: Int { state.player?.xp ?? 0 }
-    private var remaining: Int { max(0, legendaryXP - xp) }
-    private var progress: Double { min(1, Double(xp) / Double(legendaryXP)) }
+    private let legendary = 8001
+    private var connected: Bool { consent && RankStore.validUID(uid) }
+    private var xp: Int { store.player?.xp ?? 0 }
+    private var remaining: Int { max(0, legendary - xp) }
+    private var nextTier: Tier? { rankTiers.first { xp < $0.threshold } }
+    private var overallProgress: Double { min(1, Double(xp) / Double(legendary)) }
+    private var plotPoints: [Point] {
+        if period == .all { return store.points }
+        let cutoff = Date().addingTimeInterval(-7 * 24 * 3600)
+        return store.points.filter { $0.date >= cutoff }
+    }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("SENSEI / RANK").font(.caption.monospaced().bold()).tracking(2).foregroundStyle(Palette.gold)
-                            Text("CODM Rank Tracker").font(.system(size: 27, weight: .bold, design: .rounded))
-                            Text("UNOFFICIAL MULTIPLAYER COMPANION").font(.system(size: 10, weight: .medium, design: .monospaced)).foregroundStyle(Palette.muted)
-                        }
-                        Spacer()
-                        Button { showSettings = true } label: {
-                            Image(systemName: "gearshape").font(.title2).foregroundStyle(.white)
-                        }
-                        .accessibilityLabel("Settings")
-                    }
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 19) {
+                    header
                     if connected {
-                        if let player = state.player {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(player.nickname).font(.title2.bold())
-                                Text("\(player.rank)  •  Level \(player.level.map(String.init) ?? "—")")
-                                    .foregroundStyle(Palette.muted)
-                            }.panel()
+                        if let player = store.player {
+                            hero(player)
+                            overview
+                            climb
+                            trends
+                            goalCalculator
+                            history
                         } else {
-                            Text("Connecting to your account…").foregroundStyle(Palette.muted).panel()
+                            HStack(spacing: 12) {
+                                ProgressView().tint(Theme.yellow)
+                                Text("Retrieving your CODM rank…")
+                            }.frame(maxWidth: .infinity).card()
                         }
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text("RANKED XP").font(.caption.monospaced().bold()).foregroundStyle(Palette.muted)
-                            HStack(alignment: .firstTextBaseline) {
-                                Text(xp.formatted()).font(.system(size: 46, weight: .black, design: .rounded))
-                                Spacer()
-                                Text("/ \(legendaryXP.formatted())").foregroundStyle(Palette.muted)
-                            }
-                            GeometryReader { geo in
-                                ZStack(alignment: .leading) {
-                                    Capsule().fill(.white.opacity(0.12))
-                                    Capsule().fill(Palette.gold).frame(width: max(0, geo.size.width * progress))
-                                }
-                            }.frame(height: 12)
-                            HStack {
-                                metric("TO LEGENDARY", remaining.formatted())
-                                metric("LATEST CHANGE", state.lastChange.map { $0 > 0 ? "+\($0)" : "\($0)" } ?? "—")
-                            }
-                            Button {
-                                Task { await state.refresh(uid: uid) }
-                            } label: {
-                                HStack {
-                                    if state.loading { ProgressView().tint(.black) }
-                                    else { Image(systemName: "arrow.clockwise") }
-                                    Text(state.loading ? "Checking…" : "Refresh Live XP")
-                                }
-                                .frame(maxWidth: .infinity).padding(13).font(.headline)
-                                .background(Palette.gold, in: RoundedRectangle(cornerRadius: 12))
-                                .foregroundStyle(.black)
-                            }.disabled(state.loading)
-                            Text(state.player.map { "Last checked \($0.checkedAt.formatted(date: .abbreviated, time: .shortened))" } ?? "No successful lookup yet")
-                                .font(.caption).foregroundStyle(Palette.muted)
-                        }.panel()
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("XP HISTORY").font(.caption.monospaced().bold())
-                            if state.points.count > 1 {
-                                Chart(state.points) { point in
-                                    LineMark(x: .value("Time", point.date), y: .value("XP", point.xp))
-                                        .foregroundStyle(Palette.gold)
-                                    PointMark(x: .value("Time", point.date), y: .value("XP", point.xp))
-                                        .foregroundStyle(Palette.gold)
-                                }
-                                .chartYAxis { AxisMarks(position: .leading) }
-                                .frame(height: 190)
-                            } else {
-                                Text("Refresh after your next XP change to start the chart.")
-                                    .foregroundStyle(Palette.muted)
-                            }
-                            Text("Changes reflect the interval between checks, not necessarily one match.")
-                                .font(.caption2).foregroundStyle(Palette.muted)
-                        }.panel()
-                    } else {
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text("Connect your COD Mobile UID").font(.title2.bold())
-                            TextField("Numeric player UID", text: $draftUID)
-                                .textInputAutocapitalization(.never)
-                                .keyboardType(.numberPad)
-                                .textFieldStyle(.roundedBorder)
-                            Toggle("I agree to send my UID to the unofficial stats provider", isOn: $consent)
-                                .font(.subheadline)
-                            Button("Connect Read-Only") {
-                                uid = draftUID.trimmingCharacters(in: .whitespacesAndNewlines)
-                            }
-                            .disabled(!consent || !RankState.validUID(draftUID))
-                            .font(.headline)
-                            .foregroundStyle(Palette.gold)
-                            Text("The provider is not affiliated with Activision. It receives your UID and IP address. No password is required. Activision restricts unauthorized data collection.")
-                                .font(.caption).foregroundStyle(Palette.muted)
-                        }.panel()
+                    } else { connectCard }
+                    if let error = store.errorText {
+                        Label(error, systemImage: "exclamationmark.triangle.fill")
+                            .font(.footnote).foregroundStyle(Theme.orange).card()
                     }
-                    if let error = state.errorText {
-                        Label(error, systemImage: "exclamationmark.triangle").foregroundStyle(.orange).font(.footnote).panel()
-                    }
-                    Text("Fan-made. No game modification, game traffic interception, account password collection, or background polling.")
-                        .font(.caption2).foregroundStyle(Palette.muted)
+                    Text("FAN-MADE • READ-ONLY  ·  Stats from an unofficial provider. No background polling.")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(Theme.secondary).padding(.horizontal, 4)
+                        .padding(.bottom, 22)
                 }
-                .padding(20)
+                .padding(.horizontal, 18)
+                .padding(.top, 18)
             }
-            .background(Palette.background.ignoresSafeArea())
+            .background(Theme.ink.ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
-            .refreshable { if connected { await state.refresh(uid: uid) } }
+            .refreshable { if connected { await store.refresh(uid: uid) } }
             .task(id: "\(uid):\(consent)") {
-                state.load(uid: uid)
                 draftUID = uid
-                if connected { await state.refresh(uid: uid) }
+                store.load(uid: uid)
+                if connected { await store.refresh(uid: uid) }
             }
-            .onChange(of: phase) { _, value in
-                guard value == .active, connected else { return }
-                if let checked = state.player?.checkedAt, Date().timeIntervalSince(checked) < 60 { return }
-                Task { await state.refresh(uid: uid) }
+            .onChange(of: scenePhase) { _, newPhase in
+                guard newPhase == .active, connected else { return }
+                if let last = store.player?.checkedAt, Date().timeIntervalSince(last) < 60 { return }
+                Task { await store.refresh(uid: uid) }
             }
-            .sheet(isPresented: $showSettings) {
-                NavigationStack {
-                    Form {
-                        Section("Connected account") {
-                            LabeledContent("UID", value: uid.isEmpty ? "Not set" : uid)
-                            Button("Disconnect") { consent = false; showSettings = false }
-                                .foregroundStyle(.red)
-                        }
-                        Section("About") {
-                            Text("Information comes from callofdutymobile.vercel.app, an unofficial service. Availability and permission to use it are not guaranteed.")
-                            Link("Activision Terms", destination: URL(string: "https://www.activision.com/legal/terms-of-use")!)
-                        }
-                    }
-                    .navigationTitle("Settings")
-                    .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { showSettings = false } } }
+            .sheet(isPresented: $showSettings) { settings }
+        }
+    }
+
+    private var header: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "scope")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(Theme.ink)
+                .frame(width: 47, height: 47)
+                .background(Theme.yellow, in: RoundedRectangle(cornerRadius: 14))
+            VStack(alignment: .leading, spacing: 3) {
+                Text("SENSEI / COMMAND").tracking(2.1)
+                    .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(Theme.yellow)
+                Text("RANK INTELLIGENCE")
+                    .font(.system(size: 19, weight: .black, design: .rounded))
+                    .foregroundStyle(.white)
+            }
+            Spacer(minLength: 2)
+            Button { showSettings = true } label: {
+                Image(systemName: "gearshape.fill")
+                    .font(.title3)
+                    .frame(width: 41, height: 41)
+                    .background(Theme.elevated, in: Circle())
+            }.foregroundStyle(.white).accessibilityLabel("Account and settings")
+        }
+    }
+
+    private func hero(_ player: Player) -> some View {
+        VStack(alignment: .leading, spacing: 17) {
+            HStack(alignment: .top, spacing: 15) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Theme.yellow.opacity(0.16))
+                        .frame(width: 82, height: 91)
+                    Image(systemName: "shield.lefthalf.filled")
+                        .font(.system(size: 45, weight: .regular))
+                        .foregroundStyle(Theme.yellow)
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.white)
+                        .offset(y: -2)
                 }
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 6) {
+                        Circle().fill(Theme.green).frame(width: 6, height: 6)
+                        Text("LATEST RANK DATA")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundStyle(Theme.green)
+                    }
+                    Text(player.rank.uppercased())
+                        .font(.system(size: 22, weight: .black, design: .rounded))
+                        .minimumScaleFactor(0.7).lineLimit(2)
+                    Text(player.nickname)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.83))
+                    Text("PLAYER LEVEL \(player.level.map(String.init) ?? "—")")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Theme.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            Rectangle().fill(Theme.line).frame(height: 1)
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("MULTIPLAYER RANKED XP").font(.system(size: 10, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(Theme.secondary)
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(xp.formatted()).font(.system(size: 43, weight: .black, design: .rounded))
+                        Text("/ \(legendary.formatted())")
+                            .font(.system(size: 15, weight: .medium)).foregroundStyle(Theme.secondary)
+                    }.minimumScaleFactor(0.6).lineLimit(1)
+                }
+                Spacer()
+            }
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.13))
+                    Capsule().fill(LinearGradient(colors: [Theme.yellow, Theme.orange], startPoint: .leading, endPoint: .trailing))
+                        .frame(width: max(0, geometry.size.width * overallProgress))
+                }
+            }.frame(height: 10)
+            HStack {
+                Label("\(Int((overallProgress * 100).rounded()))% to Legendary", systemImage: "bolt.fill")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Theme.yellow)
+                Spacer()
+                Text("\(remaining.formatted()) XP LEFT")
+                    .font(.system(size: 11, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(Theme.secondary)
+            }
+            Button {
+                Task { await store.refresh(uid: uid) }
+            } label: {
+                HStack {
+                    if store.loading { ProgressView().tint(Theme.ink) }
+                    else { Image(systemName: "arrow.clockwise") }
+                    Text(store.loading ? "SYNCING…" : "SYNC RANK NOW")
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                }
+                .font(.system(size: 14, weight: .heavy, design: .monospaced))
+                .foregroundStyle(Theme.ink)
+                .padding(.horizontal, 16).frame(height: 48)
+                .background(Theme.yellow, in: RoundedRectangle(cornerRadius: 13))
+            }.disabled(store.loading)
+            HStack(spacing: 5) {
+                Image(systemName: "clock").foregroundStyle(Theme.secondary)
+                Text("Last checked: \(player.checkedAt.formatted(date: .abbreviated, time: .shortened))")
+            }.font(.system(size: 11)).foregroundStyle(Theme.secondary)
+        }
+        .padding(19)
+        .background(
+            RoundedRectangle(cornerRadius: 23)
+                .fill(LinearGradient(colors: [Theme.card, Color(red: 0.17, green: 0.15, blue: 0.14)],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+        )
+        .overlay(RoundedRectangle(cornerRadius: 23).stroke(Theme.yellow.opacity(0.26), lineWidth: 1))
+    }
+
+    private var overview: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("PERFORMANCE SNAPSHOT", subtitle: "Based on recorded rank checks")
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                stat("LATEST XP CHANGE", signed(store.latestChange), "arrow.up.right", Theme.yellow,
+                     "Since previous changed reading")
+                stat("TODAY'S NET XP", signed(store.todayNet), "sun.max.fill", Theme.green,
+                     "Only checks recorded today")
+                stat("7-DAY NET XP", signed(store.weekNet), "calendar", Theme.orange,
+                     "Within stored 7-day checks")
+                stat("HIGHEST OBSERVED", store.highXP.map { $0.formatted() } ?? "—",
+                     "trophy.fill", Theme.yellow, "From saved readings")
+                stat("TOTAL XP GAINED", store.changes.isEmpty ? "—" : "+\(store.totalPositive.formatted())",
+                     "chart.line.uptrend.xyaxis", Theme.green, "Positive changes recorded")
+                stat("TOTAL XP LOST", store.changes.isEmpty ? "—" : store.totalNegative.formatted(),
+                     "chart.line.downtrend.xyaxis", Theme.red, "Negative changes recorded")
             }
         }
     }
 
-    private func metric(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title).font(.system(size: 10, weight: .bold, design: .monospaced)).foregroundStyle(Palette.muted)
-            Text(value).font(.system(size: 25, weight: .bold, design: .rounded))
+    private func stat(_ title: String, _ number: String, _ symbol: String, _ accent: Color, _ info: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: symbol).font(.system(size: 15, weight: .bold)).foregroundStyle(accent)
+                Spacer()
+                Rectangle().fill(accent).frame(width: 20, height: 2)
+            }
+            Text(number)
+                .font(.system(size: 26, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.75)
+            Text(title)
+                .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                .foregroundStyle(Theme.secondary).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            Text(info).font(.system(size: 10)).foregroundStyle(Theme.secondary.opacity(0.8))
+                .lineLimit(2).fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Palette.background, in: RoundedRectangle(cornerRadius: 11))
+        .frame(maxWidth: .infinity, minHeight: 138, alignment: .topLeading)
+        .padding(14)
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 17))
+        .overlay(RoundedRectangle(cornerRadius: 17).stroke(Theme.line, lineWidth: 1))
+    }
+
+    private var climb: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            sectionTitle("ROAD TO LEGENDARY", subtitle: "Your next Grand Master milestones")
+            if let next = nextTier {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("NEXT CHECKPOINT")
+                            .font(.system(size: 10, weight: .heavy, design: .monospaced)).foregroundStyle(Theme.secondary)
+                        Text(next.title)
+                            .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    }
+                    Spacer()
+                    Text("\(max(0, next.threshold - xp).formatted()) XP")
+                        .font(.system(size: 16, weight: .black, design: .rounded))
+                        .foregroundStyle(Theme.yellow)
+                }
+            } else {
+                Label("LEGENDARY ACHIEVED", systemImage: "crown.fill")
+                    .font(.title3.bold()).foregroundStyle(Theme.yellow)
+            }
+            VStack(spacing: 12) {
+                ForEach(rankTiers) { tier in
+                    HStack(spacing: 10) {
+                        Image(systemName: xp >= tier.threshold ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(xp >= tier.threshold ? Theme.green : Theme.secondary)
+                            .font(.system(size: 17))
+                        Text(tier.shortName).font(.system(size: 12, weight: .bold, design: .monospaced))
+                        Spacer()
+                        Text(tier.threshold.formatted()).font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(Theme.secondary)
+                        if xp < tier.threshold {
+                            Text("−\(tier.threshold - xp)")
+                                .font(.system(size: 11, weight: .heavy, design: .monospaced))
+                                .foregroundStyle(tier.id == nextTier?.id ? Theme.yellow : Theme.secondary)
+                                .frame(width: 57, alignment: .trailing)
+                        } else {
+                            Text("DONE").font(.system(size: 10, weight: .heavy, design: .monospaced))
+                                .foregroundStyle(Theme.green).frame(width: 57, alignment: .trailing)
+                        }
+                    }
+                }
+            }
+            Text("Milestones use the published Grand Master tier thresholds; rank shown above comes from the live service.")
+                .font(.system(size: 10)).foregroundStyle(Theme.secondary)
+        }.card()
+    }
+
+    private var trends: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                sectionTitle("XP TREND", subtitle: "\(store.points.count) saved readings with distinct XP/rank")
+                Spacer()
+                Picker("Time range", selection: $period) {
+                    ForEach(HistoryPeriod.allCases) { item in Text(item.rawValue).tag(item) }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 126)
+            }
+            if plotPoints.count > 1 {
+                Chart(plotPoints) { point in
+                    AreaMark(x: .value("Time", point.date), yStart: .value("Base", plotPoints.map(\.xp).min() ?? 0), yEnd: .value("XP", point.xp))
+                        .foregroundStyle(LinearGradient(colors: [Theme.yellow.opacity(0.28), Theme.yellow.opacity(0.01)],
+                                                        startPoint: .top, endPoint: .bottom))
+                    LineMark(x: .value("Time", point.date), y: .value("XP", point.xp))
+                        .lineStyle(StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .foregroundStyle(Theme.yellow)
+                    PointMark(x: .value("Time", point.date), y: .value("XP", point.xp))
+                        .foregroundStyle(Theme.yellow)
+                }
+                .chartYAxis { AxisMarks(position: .leading) }
+                .chartXAxis { AxisMarks(values: .automatic(desiredCount: 3)) }
+                .frame(height: 205)
+            } else {
+                VStack(spacing: 10) {
+                    Image(systemName: "waveform.path.ecg.rectangle")
+                        .font(.system(size: 30)).foregroundStyle(Theme.yellow)
+                    Text("Your XP trend builds as your rank changes.")
+                        .multilineTextAlignment(.center).foregroundStyle(Theme.secondary)
+                    Text("Play, then sync to add another reading.")
+                        .font(.caption).foregroundStyle(Theme.secondary)
+                }
+                .frame(maxWidth: .infinity, minHeight: 170)
+            }
+            Rectangle().fill(Theme.line).frame(height: 1)
+            HStack(spacing: 5) {
+                compactMetric("BEST INCREASE", store.bestIncrease.map { "+\($0)" } ?? "—")
+                compactMetric("AVG POSITIVE CHANGE", store.positiveAverage.map { "+\($0)" } ?? "—")
+                compactMetric("RECORDED CHANGES", store.changes.count.formatted())
+            }
+            Text("Intervals between checks may include multiple matches. They are not win/loss or per-match statistics.")
+                .font(.system(size: 10)).foregroundStyle(Theme.secondary)
+        }.card()
+    }
+
+    private func compactMetric(_ name: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(value).font(.system(size: 18, weight: .heavy, design: .rounded)).foregroundStyle(.white)
+            Text(name).font(.system(size: 9, weight: .bold, design: .monospaced))
+                .foregroundStyle(Theme.secondary).fixedSize(horizontal: false, vertical: true)
+        }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var goalCalculator: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            sectionTitle("LEGENDARY PLANNER", subtitle: "Hypothetical wins — not your actual match average")
+            HStack {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("ASSUMED XP PER WIN")
+                        .font(.system(size: 10, weight: .heavy, design: .monospaced)).foregroundStyle(Theme.secondary)
+                    Text("+\(projectedXP)")
+                        .font(.system(size: 32, weight: .black, design: .rounded)).foregroundStyle(Theme.yellow)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 5) {
+                    Text("WINS TO LEGENDARY")
+                        .font(.system(size: 10, weight: .heavy, design: .monospaced)).foregroundStyle(Theme.secondary)
+                    Text(remaining == 0 ? "0" : "\((remaining + projectedXP - 1) / projectedXP)")
+                        .font(.system(size: 36, weight: .black, design: .rounded))
+                }
+            }
+            HStack(spacing: 8) {
+                ForEach([30, 40, 50, 60, 70], id: \.self) { gain in
+                    Button("+\(gain)") { projectedXP = gain }
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .frame(maxWidth: .infinity).padding(.vertical, 10)
+                        .foregroundStyle(projectedXP == gain ? Theme.ink : Theme.secondary)
+                        .background(projectedXP == gain ? Theme.yellow : Theme.elevated,
+                                    in: RoundedRectangle(cornerRadius: 9))
+                }
+            }
+            Text("Winning XP varies; losses and bonuses change the total. This calculator uses your chosen XP assumption.")
+                .font(.system(size: 10)).foregroundStyle(Theme.secondary)
+        }.card()
+    }
+
+    private var history: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("RECENT RANK CHANGES", subtitle: "Saved automatically on this iPhone")
+            if store.changes.isEmpty {
+                Text("No XP changes saved yet. Your existing baseline is preserved; sync again after gaining or losing points.")
+                    .font(.subheadline).foregroundStyle(Theme.secondary)
+            } else {
+                ForEach(Array(store.changes.suffix(8).reversed())) { change in
+                    HStack(spacing: 12) {
+                        Image(systemName: change.difference >= 0 ? "arrow.up.right" : "arrow.down.right")
+                            .foregroundStyle(change.difference >= 0 ? Theme.green : Theme.red)
+                            .frame(width: 35, height: 35)
+                            .background(Theme.elevated, in: RoundedRectangle(cornerRadius: 10))
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(change.date.formatted(date: .abbreviated, time: .shortened))
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(change.rank).font(.system(size: 11)).foregroundStyle(Theme.secondary)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 3) {
+                            Text(signed(change.difference))
+                                .font(.system(size: 16, weight: .heavy, design: .rounded))
+                                .foregroundStyle(change.difference >= 0 ? Theme.green : Theme.red)
+                            Text("\(change.xp.formatted()) XP")
+                                .font(.system(size: 10, design: .monospaced)).foregroundStyle(Theme.secondary)
+                        }
+                    }
+                    if change.id != store.changes.last?.id { Rectangle().fill(Theme.line).frame(height: 1) }
+                }
+            }
+        }.card()
+    }
+
+    private var connectCard: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Image(systemName: "lock.shield.fill").font(.system(size: 36)).foregroundStyle(Theme.yellow)
+            Text("CONNECT YOUR CODM ACCOUNT").font(.title2.bold())
+            Text("Read your Multiplayer rank without a game password. Requires your numeric UID and your consent to contact the unofficial stats service.")
+                .font(.subheadline).foregroundStyle(Theme.secondary)
+            TextField("Enter player UID", text: $draftUID)
+                .keyboardType(.numberPad)
+                .textInputAutocapitalization(.never)
+                .textFieldStyle(.roundedBorder)
+            Toggle("Allow sending my UID to the unofficial provider", isOn: $consent)
+                .tint(Theme.yellow).font(.footnote)
+            Button("CONNECT READ-ONLY") {
+                uid = draftUID.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+            .disabled(!consent || !RankStore.validUID(draftUID))
+            .frame(maxWidth: .infinity).padding(14)
+            .font(.system(size: 14, weight: .heavy, design: .monospaced))
+            .foregroundStyle(Theme.ink)
+            .background(Theme.yellow, in: RoundedRectangle(cornerRadius: 11))
+            .opacity(consent && RankStore.validUID(draftUID) ? 1 : 0.45)
+            Text("The provider receives the UID and IP address. It is not affiliated with Activision. No account credentials are collected.")
+                .font(.caption).foregroundStyle(Theme.secondary)
+        }.card()
+    }
+
+    private var settings: some View {
+        NavigationStack {
+            Form {
+                Section("Connected player") {
+                    LabeledContent("Nickname", value: store.player?.nickname ?? "—")
+                    LabeledContent("UID", value: uid.isEmpty ? "Not connected" : uid)
+                    LabeledContent("Saved changes", value: store.changes.count.formatted())
+                    Button("Disconnect lookup") {
+                        consent = false
+                        showSettings = false
+                    }.foregroundStyle(.red)
+                }
+                Section("Data transparency") {
+                    Text("Rank, XP and level are returned by a third-party API. Charts and snapshots use local saved readings. We cannot retrieve actual match results, K/D, win rate, or in-game leaderboard positions from this endpoint.")
+                    Text("The service is unofficial and its availability and authorization are not guaranteed. It receives your UID and IP when you sync. No background polling or game modification.")
+                    Link("Activision Terms", destination: URL(string: "https://www.activision.com/legal/terms-of-use")!)
+                }
+                Section("Version") { Text("CODM Rank Tracker v0.2.0") }
+            }
+            .navigationTitle("Tracker Settings")
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { showSettings = false } } }
+        }
+    }
+
+    private func sectionTitle(_ title: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title).font(.system(size: 13, weight: .black, design: .monospaced))
+                .tracking(0.8).foregroundStyle(.white)
+            Text(subtitle).font(.system(size: 11)).foregroundStyle(Theme.secondary)
+        }
+    }
+    private func signed(_ value: Int?) -> String {
+        guard let value else { return "—" }
+        return signed(value)
+    }
+    private func signed(_ value: Int) -> String {
+        value > 0 ? "+\(value.formatted())" : value.formatted()
     }
 }
 
 private extension View {
-    func panel() -> some View {
+    func card() -> some View {
         self.frame(maxWidth: .infinity, alignment: .leading)
-            .padding(18)
-            .background(Palette.panel, in: RoundedRectangle(cornerRadius: 18))
+            .padding(17)
+            .background(Theme.card, in: RoundedRectangle(cornerRadius: 21))
+            .overlay(RoundedRectangle(cornerRadius: 21).stroke(Theme.line, lineWidth: 0.8))
     }
 }
