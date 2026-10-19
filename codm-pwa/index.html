@@ -54,9 +54,9 @@
                 <span class="emblem-spark spark-one"></span><span class="emblem-spark spark-two"></span>
                 <span class="emblem-spark spark-three"></span><span class="emblem-spark spark-four"></span>
               </span>
-              <span id="rankVector" class="hd-rank-art" aria-hidden="true"></span>
+              <img id="rankArt" alt="Original COD Mobile rank emblem supplied by the account provider" loading="eager" decoding="async" hidden><span id="badgeUnavailable" class="rank-unavailable" hidden>RANK ART<br>UNAVAILABLE</span>
             </button>
-            <div class="identity-info"><small>CURRENT DIVISION</small><h2 id="rankLabel">—</h2><b id="playerName">—</b><span id="levelBadge">LEVEL —</span><span class="charge-hint" id="chargeHint">✧ TAP THE HD BADGE TO CHARGE</span></div>
+            <div class="identity-info"><small>CURRENT DIVISION</small><h2 id="rankLabel">—</h2><b id="playerName">—</b><span id="levelBadge">LEVEL —</span><span class="charge-hint" id="chargeHint">✧ TAP ORIGINAL BADGE FOR GLOW</span></div>
           </div>
           <div class="hero-divider"></div>
           <div class="progress-head"><div><small>CURRENT RANK XP</small><strong id="currentXP">—</strong></div><div class="progress-goal"><small>LEGENDARY</small><b>8,001</b></div></div>
@@ -90,19 +90,10 @@
           <div class="section-label"><b>PLAYER IDENTITY</b><small>Provided by the account lookup</small></div>
           <div class="profile-hero"><div class="avatar"><img id="avatar" alt="Player avatar" hidden><span id="avatarFallback">◈</span></div><div><h2 id="profileName">—</h2><span id="profileRank">—</span><p id="profileLevel">LEVEL —</p></div></div>
           <div class="data-list" id="identityRows"></div>
-          <div class="hd-art-notice">CURRENT INSIGNIA: ORIGINAL RANK COMMAND VECTOR ART · CRISP AT ANY ZOOM</div>
-          <div class="source-art-row"><div class="source-art-thumb">
-            <img id="originalRankArt" alt="Original low-resolution rank badge from account provider" hidden>
-            <span id="originalArtFallback">—</span></div>
-            <div><b>GAME BADGE SOURCE</b><p>The unofficial service returns a small PNG. This thumbnail shows the original without enlarging it.</p></div>
-          </div>
+          <div class="hd-art-notice">RANK ARTWORK: ORIGINAL COD MOBILE EMBLEM PROVIDED BY THE STATS SERVICE</div>
+          <p class="small">Original artwork only. The icon is shown at its native resolution or smaller; a low-resolution original may still appear soft.</p>
           <div class="level-art"><img id="levelArt" alt="Player level badge" hidden><span id="levelArtFallback">✦</span><span>LEVEL BADGE ARTWORK</span></div>
           <button class="secondary full" id="copyUID">COPY MY UID</button>
-        </section>
-        <section class="card">
-          <div class="section-label"><b>HD RANK INSIGNIA GALLERY</b><small>Fan-made vector companion graphics for all seven ranked divisions</small></div>
-          <div id="rankGallery" class="rank-gallery" aria-label="All seven HD rank insignias"></div>
-          <p class="small">These custom SVGs are not official COD Mobile game assets. Your own rank is always determined by the connected profile, not the gallery.</p>
         </section>
         <section class="card">
           <div class="section-label"><b>DATA COVERAGE</b><small>Know what's actually available</small></div>
@@ -133,9 +124,8 @@
     </section>
     <div id="notice" role="status" aria-live="polite" hidden></div>
   </main>
-  <footer><span>RANK COMMAND / WEB v1.2.0</span><span>FAN-MADE · READ-ONLY · NOT AFFILIATED</span><p>Install on iPhone: open in Safari → Share → Add to Home Screen. The tracker requires internet to sync; previously saved readings remain visible offline.</p></footer>
+  <footer><span>RANK COMMAND / WEB v1.3.0</span><span>FAN-MADE · READ-ONLY · NOT AFFILIATED</span><p>Install on iPhone: open in Safari → Share → Add to Home Screen. The tracker requires internet to sync; previously saved readings remain visible offline.</p></footer>
 </div>
-<script defer src="/rank-art.js"></script>
 <script defer src="/app.js"></script>
 </body>
 </html>
