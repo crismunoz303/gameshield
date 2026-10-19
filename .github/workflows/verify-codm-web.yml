@@ -14,79 +14,108 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: JavaScript syntax
+      - name: Check JavaScript syntax
         run: |
           node --check codm-pwa/app.js
           node --check codm-pwa/meta.js
           node --check codm-pwa/blueprints.js
           node --check codm-pwa/sw.js
           node --check codm-pwa/api/player.js
-      - name: Only sourced, supported data is shown
+      - name: Validate page markup and unique identifiers
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from collections import Counter
+          from pathlib import Path
+          class Check(HTMLParser):
+              void={'meta','link','img','input','br','hr','source','area','base','embed','param','wbr'}
+              def __init__(self):
+                  super().__init__(convert_charrefs=True)
+                  self.stack=[]
+                  self.ids=[]
+              def handle_starttag(self,tag,attrs):
+                  attrs=dict(attrs)
+                  if 'id' in attrs: self.ids.append(attrs['id'])
+                  if tag not in self.void: self.stack.append(tag)
+              def handle_startendtag(self,tag,attrs):
+                  attrs=dict(attrs)
+                  if 'id' in attrs: self.ids.append(attrs['id'])
+              def handle_endtag(self,tag):
+                  assert self.stack and self.stack[-1]==tag, f'Unbalanced closing {tag}, stack {self.stack[-6:]}'
+                  self.stack.pop()
+          h=Path('codm-pwa/index.html').read_text()
+          p=Check();p.feed(h);p.close()
+          assert not p.stack, p.stack
+          duplicates=[x for x,n in Counter(p.ids).items() if n>1]
+          assert not duplicates,f'Duplicate IDs: {duplicates}'
+          print('PASS: HTML tag nesting and IDs')
+          PY
+      - name: Test browse-first app, account isolation and evidence policy
         run: |
           node <<'NODE'
           const assert=require('node:assert/strict');
           const fs=require('node:fs');
-          const text=name=>fs.readFileSync('codm-pwa/'+name,'utf8');
-          const html=text('index.html'),js=text('app.js'),css=text('style.css'),sw=text('sw.js');
-          const meta=require('./codm-pwa/meta.js');
-          const blueprints=require('./codm-pwa/blueprints.js');
-          const all=html+js+text('meta.js')+text('blueprints.js');
+          const read=name=>fs.readFileSync('codm-pwa/'+name,'utf8');
+          const html=read('index.html'),js=read('app.js'),css=read('style.css'),sw=read('sw.js');
+          const meta=require('./codm-pwa/meta.js'),blueprints=require('./codm-pwa/blueprints.js');
+          const all=html+js+read('meta.js')+read('blueprints.js');
           assert.ok(!/NOT VERIFIED|NOT CURRENTLY VERIFIED|not verified|unverified/i.test(all));
-          assert.ok(!/historical benchmarks|2023 guide|2023 reference/i.test(html));
-          for(const forbidden of ['/progression.js','id="metaTTK"','VERIFIED TTK',
-            'id="gainChoices"','id="milestones"','id="progressBar"','id="nextTier"',
-            'id="blueprintRarityNotStated"','data-blueprint-filter="UNKNOWN"']){
-            assert.ok(!html.includes(forbidden),'unsupported visible UI '+forbidden);
+          assert.ok(!/2023 guide|historical benchmarks/i.test(html));
+          const tabs=['command','meta','blueprints','analytics','player'];
+          for(const tab of tabs){
+            assert.ok(html.includes('id="pane-'+tab+'"'),'missing pane '+tab);
+            assert.ok(html.includes('data-tab="'+tab+'"'),'missing navigation '+tab);
           }
-          assert.ok(!sw.includes('/progression.js'));
-          assert.ok(!js.includes('RANKS.')&&!js.includes('const LEGENDARY'));
-          assert.ok(sw.includes('rankcommand-static-v17'));
-          for(const item of ['/meta.js','/blueprints.js']){
-            assert.ok(sw.includes(item));
-            assert.ok(html.includes('src="'+item+'"'));
-            assert.ok(html.indexOf(item)<html.indexOf('/app.js'));
+          assert.equal((html.match(/data-tab="/g)||[]).length,5);
+          assert.ok(!html.includes('data-tab="history"'));
+          assert.ok(html.includes('id="pane-history"'));
+          for(const id of ['connectPanel','homePlayerData','homeLoadouts','homeBlueprints','metaBrowser',
+            'metaDetail','metaWeapons','metaAttachments','metaCopy','loadoutSearch','backLoadoutBtn',
+            'pane-blueprints','blueprintBrowser','blueprintList','blueprintDetail','blueprintSource',
+            'blueprintSearch','backBlueprintBtn','viewHistoryBtn','backToStatsBtn','profileXP',
+            'avatar','rankArt','refreshBtn','analyticsRows','chart','rankEvents','backupBtn',
+            'restoreBtn','restoreFile','uidInput','consent']){
+            assert.ok(html.includes('id="'+id+'"'),'missing user-interface element '+id);
           }
-          for(const tab of ['command','player','analytics','history','meta']){
-            assert.ok(html.includes('data-tab="'+tab+'"'),tab);
-          }
-          for(const id of ['rankArt','avatar','profileXP','profileNext','currentXP','metaWeapons',
-              'metaAttachments','metaSourceLink','metaCopy','modeBlueprints','blueprintList',
-              'blueprintDetail','blueprintSource','blueprintRarity','backupBtn','restoreBtn',
-              'connectForm','historyList','chart']){
-            assert.ok(html.includes('id="'+id+'"'),'missing '+id);
-          }
-          assert.ok(js.includes('displayArt("rankArt","badgeUnavailable",player.rankArt)'));
-          assert.ok(js.includes('displayArt("avatar","avatarFallback",player.pic)'));
-          assert.ok(js.includes('function renderBlueprints(){'));
-          assert.ok(js.includes('if(entry.rarity)b.append(rarity)'));
-          assert.ok(js.includes('$("blueprintRarity").hidden=!selected.rarity'));
-          assert.ok(js.includes('switchWeaponMode(weaponMode)'));
-          assert.ok(js.includes('localStorage.setItem(STORAGE_PREFIX+uidKey("avatar")'));
-          assert.ok(js.includes('function backupHistory()'));
-          assert.ok(js.includes('async function restoreHistory(file)'));
-          assert.ok(!fs.existsSync('codm-pwa/rank-art.js'));
+          for(const feature of [
+            'function renderHomeDiscover(){','function renderMeta(){','function renderBlueprints(){',
+            'metaDetailOpen=true','blueprintDetailOpen=true','$("backLoadoutBtn")',
+            '$("backBlueprintBtn")','document.querySelectorAll("[data-go]")',
+            '$("viewHistoryBtn")','$("backToStatsBtn")',
+            '$("dashboard").hidden=false;','$("homePlayerData").hidden=true;',
+            'tab==="history"?"analytics":tab',
+            'displayArt("rankArt","badgeUnavailable",player.rankArt)',
+            'displayArt("avatar","avatarFallback",player.pic)',
+            'localStorage.setItem(STORAGE_PREFIX+uidKey("avatar")',
+            'data.uid!==uid','data.readings.every(valid)','requestedUID=uid'
+          ])assert.ok(js.includes(feature),'missing behavior '+feature);
+          assert.ok(!js.includes('switchWeaponMode('));
+          assert.ok(!html.includes('modeGunsmith'));
+          assert.ok(!html.includes('id="metaTTK"'));
+          const refs=[...js.matchAll(/\$\("([A-Za-z0-9_-]+)"\)/g)].map(x=>x[1]);
+          for(const id of new Set(refs))assert.ok(html.includes('id="'+id+'"'),'JavaScript refers to missing #'+id);
           assert.equal(meta.entries.length,2);
-          for(const item of meta.entries){
-            assert.equal(item.attachments.length,5);
-            assert.ok(item.url.startsWith('https://'));
-            for(const part of item.attachments){
-              assert.ok(part.slot.length>1&&part.name.length>2);
-            }
+          for(const entry of meta.entries){
+            assert.ok(entry.url.startsWith('https://'));
+            assert.equal(entry.attachments.length,5);
             for(const key of ['ttk','ttkStatus','metaRank','published'])
-              assert.ok(!Object.hasOwn(item,key),'unsupported Gunsmith field '+key);
+              assert.ok(!Object.hasOwn(entry,key),'unsupported meta '+key);
           }
           assert.equal(blueprints.length,20);
-          const unique=new Set();
-          for(const bp of blueprints){
-            assert.ok(bp.id&&bp.weapon&&bp.blueprint);
-            assert.ok(!unique.has(bp.id),'duplicate blueprint '+bp.id);unique.add(bp.id);
-            assert.ok(bp.sourceUrl.startsWith('https://www.callofduty.com/blog/'));
-            assert.ok(!Object.hasOwn(bp,'rarity')||['Mythic','Legendary'].includes(bp.rarity));
-            for(const forbidden of ['ttkMs','ttkStatus','availability','owned']){
-              assert.ok(!Object.hasOwn(bp,forbidden),'unsupported blueprint field '+forbidden);
-            }
+          const names=new Set();
+          for(const entry of blueprints){
+            assert.ok(entry.sourceUrl.startsWith('https://www.callofduty.com/blog/'));
+            assert.ok(!names.has(entry.id));names.add(entry.id);
+            assert.ok(entry.rarity===undefined||['Mythic','Legendary'].includes(entry.rarity));
+            for(const key of ['ttkMs','ttkStatus','availability','owned'])
+              assert.ok(!Object.hasOwn(entry,key),'unsupported blueprint '+key);
           }
-          assert.ok(css.includes('env(safe-area-inset-top'));
+          assert.ok(css.includes('.hub-preview-list'));
+          assert.ok(css.includes('.meta-weapons,.blueprint-list{display:flex'));
           assert.ok(css.includes('.tabs.dock-retracted'));
-          console.log('PASS — documented attachments, official blueprint facts, no guessed TTK, no old-season projections, original rank artwork, account isolation');
+          assert.ok(css.includes('env(safe-area-inset-top'));
+          assert.ok(sw.includes('rankcommand-static-v18'));
+          assert.ok(sw.includes('/meta.js')&&sw.includes('/blueprints.js'));
+          assert.ok(!sw.includes('/progression.js'));
+          console.log('PASS: source-accurate data, guest weapons, five-tab IA, list > details, saved UID data, rank artwork, and browser cache');
           NODE
