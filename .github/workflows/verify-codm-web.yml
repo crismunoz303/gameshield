@@ -96,7 +96,7 @@ jobs:
           assert.ok(js.includes('showNavigationDock()'));
           assert.ok(js.includes('document.documentElement.scrollTop=0'));
           assert.ok(sw.includes('/progression.js'));
-          assert.ok(sw.includes('rankcommand-static-v15'));
+          assert.ok(sw.includes('rankcommand-static-v16'));
 
           assert.ok(sw.includes('/meta.js'));
           assert.ok(sw.includes('/blueprints.js'));
@@ -117,6 +117,9 @@ jobs:
           assert.ok(meta.entries.every(x=>x.ttk===null&&x.metaRank===null));
           assert.ok(html.includes('Codashop guide dated February 16, 2023'));
           assert.ok(!ranks.reference.verifiedCurrent);
+          assert.ok(html.includes('PROVIDER-REPORTED PROFILE FIELDS'));
+          assert.ok(html.includes('LAST REPORTED RATING'));
+          assert.ok(!html.includes('VERIFIED PROFILE FIELDS'));
           assert.ok(!js.includes('POSSIBLE SEASON RESET'));
           const seen=new Set();
           for(const entry of meta.entries){
