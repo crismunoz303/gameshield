@@ -63,16 +63,19 @@
     const crown=(key==="legendary"||key==="grandmaster")?'<path d="M131 66 149 82 160 61 172 82 190 66 187 93 133 93Z" fill="var(--badge-hi)" stroke="var(--badge-edge)" stroke-width="3"/>':"";
     const symbol= numeral ? '<text x="160" y="269" font-family="system-ui,sans-serif" font-size="31" font-weight="950" letter-spacing="-2" text-anchor="middle" fill="var(--badge-hi)" stroke="var(--badge-dark)" stroke-width="1.2" paint-order="stroke">'+numeral+'</text>' :
       '<path d="m149 254 11 14 11-14-11-15Z" fill="var(--badge-hi)"/>';
+    const prefix="tier-"+t.key+"-";
+    const glyphWings=wings(key).replaceAll("url(#outer)","url(#"+prefix+"outer)").replaceAll("url(#inner)","url(#"+prefix+"inner)");
+    const glyphCenter=center(key).replaceAll("url(#gem)","url(#"+prefix+"gem)");
     return '<svg class="hd-rank-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-label="'+t.label+' Rank Command fan-made HD vector insignia" style="--badge-base:'+t.base+';--badge-hi:'+t.hi+';--badge-edge:'+t.edge+';--badge-dark:'+t.dark+';--badge-glow:'+t.glow+'">'+
-      '<defs><linearGradient id="outer" x1="0" y1="0" x2="0.8" y2="1"><stop stop-color="'+t.hi+'"/><stop offset=".45" stop-color="'+t.base+'"/><stop offset="1" stop-color="'+t.dark+'"/></linearGradient>'+
-      '<linearGradient id="inner" x1=".9" y1=".1" x2=".1" y2=".9"><stop stop-color="'+t.dark+'"/><stop offset=".5" stop-color="'+t.base+'"/><stop offset="1" stop-color="'+t.hi+'"/></linearGradient>'+
-      '<radialGradient id="gem"><stop stop-color="'+t.hi+'"/><stop offset=".42" stop-color="'+t.base+'"/><stop offset="1" stop-color="'+t.dark+'"/></radialGradient></defs>'+
+      '<defs><linearGradient id="'+prefix+'outer" x1="0" y1="0" x2="0.8" y2="1"><stop stop-color="'+t.hi+'"/><stop offset=".45" stop-color="'+t.base+'"/><stop offset="1" stop-color="'+t.dark+'"/></linearGradient>'+
+      '<linearGradient id="'+prefix+'inner" x1=".9" y1=".1" x2=".1" y2=".9"><stop stop-color="'+t.dark+'"/><stop offset=".5" stop-color="'+t.base+'"/><stop offset="1" stop-color="'+t.hi+'"/></linearGradient>'+
+      '<radialGradient id="'+prefix+'gem"><stop stop-color="'+t.hi+'"/><stop offset=".42" stop-color="'+t.base+'"/><stop offset="1" stop-color="'+t.dark+'"/></radialGradient></defs>'+
       '<g fill="none" stroke="'+t.edge+'" stroke-width="1.8" opacity=".55"><ellipse cx="160" cy="170" rx="111" ry="113"/><path d="M160 45V30 M160 295V286 M40 160H55 M265 160H281"/></g>'+
-      wings(key)+
-      '<path d="M160 48 218 84 222 166 206 225 160 271 114 225 98 166 102 84Z" fill="url(#outer)" stroke="var(--badge-hi)" stroke-width="5"/>'+
+      glyphWings+
+      '<path d="M160 48 218 84 222 166 206 225 160 271 114 225 98 166 102 84Z" fill="url(#'+prefix+'outer)" stroke="var(--badge-hi)" stroke-width="5"/>'+
       '<path d="M160 64 205 92 207 164 195 217 160 253 125 217 113 164 115 92Z" fill="var(--badge-dark)" stroke="var(--badge-edge)" stroke-width="4"/>'+
-      '<path d="M160 78 197 101 197 164 186 205 160 232 134 205 123 164 123 101Z" fill="url(#inner)" stroke="var(--badge-hi)" stroke-width="2" opacity=".85"/>'+
-      crown+center(key)+
+      '<path d="M160 78 197 101 197 164 186 205 160 232 134 205 123 164 123 101Z" fill="url(#'+prefix+'inner)" stroke="var(--badge-hi)" stroke-width="2" opacity=".85"/>'+
+      crown+glyphCenter+
       '<path d="M125 240 160 249 195 240 186 276 160 294 134 276Z" fill="url(#outer)" stroke="var(--badge-hi)" stroke-width="4"/>'+
       symbol+
       '<path d="m134 115 15-16m27 0 12 16" stroke="var(--badge-hi)" stroke-width="2" opacity=".75"/>'+
