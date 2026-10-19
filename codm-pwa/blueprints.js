@@ -1,6 +1,6 @@
 /* Authentic weapon blueprints transcribed from Activision news releases.
  No inferred rarity, inventory status, availability, performance or skin effects.
- NULL means NOT VERIFIED. Every record has its official announcement link.
+ Optional rarity is included only when explicitly stated. All records cite Activision.
  Last reviewed: 2026-10-19. */
 (function(root){
 "use strict";
@@ -13,11 +13,7 @@ const all=[
     "release": "Lucky Draw / Hunger Eternal",
     "season": "2026 S9",
     "sourceUrl": "https://www.callofduty.com/blog/2026/10/call-of-duty-mobile-season-9-vampires-werewolves",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "ram7-nebula",
@@ -27,11 +23,7 @@ const all=[
     "release": "Mythic re-run / Whorl of Midnight",
     "season": "2026 S9",
     "sourceUrl": "https://www.callofduty.com/blog/2026/10/call-of-duty-mobile-season-9-vampires-werewolves",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "ak47-radiance",
@@ -41,151 +33,97 @@ const all=[
     "release": "Mythic re-run / Ultraviolet",
     "season": "2026 S9",
     "sourceUrl": "https://www.callofduty.com/blog/2026/10/call-of-duty-mobile-season-9-vampires-werewolves",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "ak117-lycan",
     "weapon": "AK-117",
     "blueprint": "Lycan Eclipse",
-    "rarity": null,
     "release": "Weresoldier Unleashed Draw",
     "season": "2026 S9",
     "sourceUrl": "https://www.callofduty.com/blog/2026/10/call-of-duty-mobile-season-9-vampires-werewolves",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "cx9-wolven",
     "weapon": "CX9",
     "blueprint": "Wolven Moonrise",
-    "rarity": null,
     "release": "Premium Battle Pass",
     "season": "2026 S9",
     "sourceUrl": "https://www.callofduty.com/blog/2026/10/call-of-duty-mobile-season-9-vampires-werewolves",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "3line-cantus",
     "weapon": "3-Line Rifle",
     "blueprint": "Cantus Rubra",
-    "rarity": null,
     "release": "Premium Battle Pass",
     "season": "2026 S9",
     "sourceUrl": "https://www.callofduty.com/blog/2026/10/call-of-duty-mobile-season-9-vampires-werewolves",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "mg82-blood",
     "weapon": "MG82",
     "blueprint": "Bloodsucker’s Ban",
-    "rarity": null,
     "release": "Premium Battle Pass",
     "season": "2026 S9",
     "sourceUrl": "https://www.callofduty.com/blog/2026/10/call-of-duty-mobile-season-9-vampires-werewolves",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "grav-solstice",
     "weapon": "Grav",
     "blueprint": "Solstice Herald",
-    "rarity": null,
     "release": "Premium Battle Pass",
     "season": "2026 S9",
     "sourceUrl": "https://www.callofduty.com/blog/2026/10/call-of-duty-mobile-season-9-vampires-werewolves",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "type25-lone",
     "weapon": "Type 25",
     "blueprint": "Lone Wolf",
-    "rarity": null,
     "release": "Fang Wars / Werewolves reward",
     "season": "2026 S9",
     "sourceUrl": "https://www.callofduty.com/blog/2026/10/call-of-duty-mobile-season-9-vampires-werewolves",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "so14-moon",
     "weapon": "SO-14",
     "blueprint": "Moonlit Marksman Rifle",
-    "rarity": null,
     "release": "Fang Wars / Vampires reward",
     "season": "2026 S9",
     "sourceUrl": "https://www.callofduty.com/blog/2026/10/call-of-duty-mobile-season-9-vampires-werewolves",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "type19-petal",
     "weapon": "Type 19",
     "blueprint": "Petal Pattern",
-    "rarity": null,
     "release": "Fang Wars shared milestone reward",
     "season": "2026 S9",
     "sourceUrl": "https://www.callofduty.com/blog/2026/10/call-of-duty-mobile-season-9-vampires-werewolves",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "qxr-rose",
     "weapon": "QXR",
     "blueprint": "Rose Requiem",
-    "rarity": null,
     "release": "Challenge Pass token reward",
     "season": "2026 S9",
     "sourceUrl": "https://www.callofduty.com/blog/2026/10/call-of-duty-mobile-season-9-vampires-werewolves",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "r90-hell",
     "weapon": "R9-0",
     "blueprint": "Hellborne Hybrid",
-    "rarity": null,
     "release": "Ground Forces Battle Pass subscription",
     "season": "2026 S9",
     "sourceUrl": "https://www.callofduty.com/blog/2026/10/call-of-duty-mobile-season-9-vampires-werewolves",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "iso-core",
@@ -195,11 +133,7 @@ const all=[
     "release": "Honkai Impact 3rd Mythic Weapons Series Armory",
     "season": "2026 S8",
     "sourceUrl": "https://www.callofduty.com/blog/2026/09/call-of-duty-mobile-season-8-against-all-fate",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "static-core",
@@ -209,11 +143,7 @@ const all=[
     "release": "Honkai Impact 3rd Mythic Weapons Series Armory",
     "season": "2026 S8",
     "sourceUrl": "https://www.callofduty.com/blog/2026/09/call-of-duty-mobile-season-8-against-all-fate",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "bal-core",
@@ -223,11 +153,7 @@ const all=[
     "release": "Honkai Impact 3rd Mythic Weapons Series Armory",
     "season": "2026 S8",
     "sourceUrl": "https://www.callofduty.com/blog/2026/09/call-of-duty-mobile-season-8-against-all-fate",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "grau-rita",
@@ -237,59 +163,40 @@ const all=[
     "release": "Season 8 Legendary Secret Cache",
     "season": "2026 S8",
     "sourceUrl": "https://www.callofduty.com/blog/2026/09/call-of-duty-mobile-season-8-against-all-fate",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "striker-chibi",
     "weapon": "Striker",
     "blueprint": "Chibi Chassis",
-    "rarity": null,
     "release": "Premium Battle Pass",
     "season": "2026 S8",
     "sourceUrl": "https://www.callofduty.com/blog/2026/09/call-of-duty-mobile-season-8-against-all-fate",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "iso-diagnostics",
     "weapon": "ISO Hemlock",
     "blueprint": "Diagnostics",
-    "rarity": null,
     "release": "Premium Battle Pass",
     "season": "2026 S8",
     "sourceUrl": "https://www.callofduty.com/blog/2026/09/call-of-duty-mobile-season-8-against-all-fate",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   },
   {
     "id": "static-overhaul",
     "weapon": "Static-HV",
     "blueprint": "Overhaul",
-    "rarity": null,
     "release": "Premium Battle Pass",
     "season": "2026 S8",
     "sourceUrl": "https://www.callofduty.com/blog/2026/09/call-of-duty-mobile-season-8-against-all-fate",
-    "source": "Activision / Call of Duty blog",
-    "ttkMs": null,
-    "ttkStatus": "NOT VERIFIED",
-    "availability": "NOT VERIFIED",
-    "owned": null
+    "source": "Activision / Call of Duty blog"
   }
 ];
 for(const item of all){
   if(!item.id||!item.weapon||!item.blueprint||!item.sourceUrl.startsWith("https://www.callofduty.com/blog/")||
-    !["Mythic","Legendary",null].includes(item.rarity)||item.ttkMs!==null||item.availability!=="NOT VERIFIED"||item.owned!==null)
-    throw Error("Unverified blueprint entry");
+    !(item.rarity===undefined||["Mythic","Legendary"].includes(item.rarity)))
+    throw Error("Invalid official blueprint record");
 }
 const blueprints=Object.freeze(all.map(item=>Object.freeze({...item})));
 root.RankBlueprints=blueprints;
