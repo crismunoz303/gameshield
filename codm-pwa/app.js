@@ -261,7 +261,7 @@ function drawChart(){
   const t0=selected[0].timestamp,t1=selected.at(-1).timestamp;
   const atX=x=>margin.left+(t1===t0?0.5:(x-t0)/(t1-t0))*cw;
   const atY=y=>margin.top+ch-(y-min)/(max-min)*ch;
-  ctx.font="10px -apple-system,sans-serif";ctx.textAlign="right";ctx.fillStyle="#aab5c2";ctx.strokeStyle="#ffffff1c";
+  ctx.font='600 10px "IBM Plex Mono", ui-monospace, monospace';ctx.textAlign="right";ctx.fillStyle="#aab5c2";ctx.strokeStyle="#ffffff1c";
   for(let i=0;i<=4;i++){let y=margin.top+ch/4*i;ctx.beginPath();ctx.moveTo(margin.left,y);ctx.lineTo(w-margin.right,y);ctx.stroke();ctx.fillText(fmt(max-(max-min)/4*i),margin.left-6,y+3)}
   ctx.textAlign="left";ctx.fillText(new Date(t0).toLocaleDateString(),margin.left,h-7);
   ctx.textAlign="right";ctx.fillText(new Date(t1).toLocaleDateString(),w-margin.right,h-7);
