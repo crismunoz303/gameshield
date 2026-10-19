@@ -19,6 +19,7 @@ jobs:
           node --check codm-pwa/app.js
           node --check codm-pwa/progression.js
           node --check codm-pwa/meta.js
+          node --check codm-pwa/blueprints.js
           node --check codm-pwa/sw.js
           node --check codm-pwa/api/player.js
       - name: Test every rank and all major interfaces
@@ -36,17 +37,17 @@ jobs:
             [4501,'MASTER'],[6001,'GRAND MASTER'],[8001,'LEGENDARY']
           ];
           for(const [xp,name] of expected)assert.equal(ranks.currentBand(xp).name,name);
-          assert.equal(ranks.promotion(6074).label,'GM II');
-          assert.equal(ranks.promotion(6074).remaining,326);
-          assert.equal(ranks.promotion(6074).estimated,true);
+          assert.equal(ranks.promotion(6074).label,'GRAND MASTER II');
+          assert.equal(ranks.promotion(6074).remaining,327);
+          assert.equal(ranks.promotion(6074).historical,true);
           assert.equal(ranks.promotion(100).label,'ROOKIE II');
-          assert.equal(ranks.promotion(4500).label,'MASTER');
+          assert.equal(ranks.promotion(4500).label,'MASTER I');
           assert.equal(ranks.promotion(8001).complete,true);
           assert.equal(ranks.promotion(15000).remaining,0);
           assert.equal(ranks.progress(8001),100);
           assert.equal(ranks.progress(0),0);
           assert.equal(ranks.nearby(3500).length,6);
-          assert.equal(ranks.isReset({xp:8200},{xp:5000}),true);
+          assert.equal(ranks.isReset({xp:8200},{xp:5000}),false);
           assert.equal(ranks.isReset({xp:7200},{xp:7000}),false);
           assert.ok(!ranks.CHECKPOINTS.some((a,i)=>i&&a.at<=ranks.CHECKPOINTS[i-1].at));
           assert.ok(html.indexOf('/progression.js')<html.indexOf('/app.js'));
@@ -95,9 +96,12 @@ jobs:
           assert.ok(js.includes('showNavigationDock()'));
           assert.ok(js.includes('document.documentElement.scrollTop=0'));
           assert.ok(sw.includes('/progression.js'));
-          assert.ok(sw.includes('rankcommand-static-v14'));
+          assert.ok(sw.includes('rankcommand-static-v15'));
 
           assert.ok(sw.includes('/meta.js'));
+          assert.ok(sw.includes('/blueprints.js'));
+          assert.ok(html.includes('src="/blueprints.js"'));
+          assert.ok(html.indexOf('/blueprints.js')<html.indexOf('/app.js'));
           assert.ok(html.includes('src="/meta.js"'));
           assert.ok(html.indexOf('/meta.js')<html.indexOf('/app.js'));
           assert.ok(html.includes('data-tab="meta"'));
@@ -109,7 +113,11 @@ jobs:
           assert.ok(css.includes('grid-template-columns:repeat(5,minmax(0,1fr))'));
           const meta=require('./codm-pwa/meta.js');
           assert.equal(meta.season.label,'SEASON 9 // VAMPIRES VS WEREWOLVES');
-          assert.equal(meta.entries.length,6);
+          assert.equal(meta.entries.length,2);
+          assert.ok(meta.entries.every(x=>x.ttk===null&&x.metaRank===null));
+          assert.ok(html.includes('Codashop guide dated February 16, 2023'));
+          assert.ok(!ranks.reference.verifiedCurrent);
+          assert.ok(!js.includes('POSSIBLE SEASON RESET'));
           const seen=new Set();
           for(const entry of meta.entries){
             assert.ok(!seen.has(entry.id),'duplicate meta '+entry.id);
@@ -123,7 +131,33 @@ jobs:
               assert.ok(part.slot.length>1&&part.name.length>2);
             }
           }
-          console.log('PASS: 6 sourced loadouts, all 5 slots, verified-only TTK policy, fifth tab, unchanged original rank art');
+          const blueprints=require('./codm-pwa/blueprints.js');
+          assert.equal(blueprints.length,20);
+          const ids=new Set();
+          for(const bp of blueprints){
+            assert.ok(!ids.has(bp.id),'duplicated blueprint '+bp.id);
+            ids.add(bp.id);
+            assert.ok(bp.sourceUrl.startsWith('https://www.callofduty.com/blog/'));
+            assert.ok(bp.weapon.length>1&&bp.blueprint.length>2);
+            assert.ok(['Mythic','Legendary',null].includes(bp.rarity));
+            assert.equal(bp.ttkMs,null);
+            assert.equal(bp.availability,'NOT VERIFIED');
+            assert.equal(bp.owned,null);
+          }
+          for(const id of ['metaGunsmith','metaBlueprints','modeGunsmith','modeBlueprints',
+              'blueprintSearch','blueprintList','blueprintCount','blueprintDetail','blueprintSource',
+              'blueprintRelease','blueprintRarity']){
+            assert.ok(html.includes('id="'+id+'"'),'missing blueprint control '+id);
+          }
+          assert.ok(js.includes('function renderBlueprints(){'));
+          assert.ok(js.includes('blueprintFilter==="UNKNOWN"?x.rarity===null'));
+          assert.ok(css.includes('.blueprint-list'));
+          assert.ok(!html.includes('FASTEST TTK'));
+          const renderCode=js.slice(js.indexOf('function displayPlayerAvatar(){'),js.indexOf('async function saveLocalAvatar(file)'));
+          assert.ok(renderCode.includes('displayArt("avatar","avatarFallback",player.pic)'));
+          assert.ok(!renderCode.includes('displayPlayerAvatar();'));
+          console.log('PASS: officially sourced blueprints and historical guide disclosures');
+          console.log('PASS: 2 sourced five-attachment builds, TTK labels accurate');
 
           console.log('PASS: all seven ranks, GM checkpoints, original artwork, UID safety, backup controls, responsive styling');
           NODE
