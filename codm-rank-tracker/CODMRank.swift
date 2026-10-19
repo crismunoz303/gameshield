@@ -1,7 +1,7 @@
 import SwiftUI
 import Charts
 
-// CODM Rank Tracker v0.2.0 — rank and XP are read-only, sourced from an unofficial service.
+// CODM Rank Tracker v0.3.0 — rank and XP are read-only, sourced from an unofficial service.
 private enum Theme {
     static let ink = Color(red: 0.032, green: 0.041, blue: 0.066)
     static let card = Color(red: 0.090, green: 0.114, blue: 0.158)
@@ -18,6 +18,7 @@ private struct RemoteLevel: Decodable { let current: Int? }
 private struct RemoteRank: Decodable {
     let multiplayerRank: String?
     let rating: Int?
+    let image: String?
 }
 private struct RemoteProfile: Decodable {
     let success: Bool
@@ -31,6 +32,7 @@ private struct Player: Codable {
     let rank: String
     let xp: Int
     let checkedAt: Date
+    let rankImageURL: String?
 }
 private struct Point: Codable, Identifiable {
     let id: UUID
@@ -101,7 +103,7 @@ private final class RankStore: ObservableObject {
                 throw NSError(domain: "CODM", code: 3, userInfo: [NSLocalizedDescriptionKey: "Rank data is unavailable or its format changed."])
             }
             guard activeUID == uid else { return }
-            let updated = Player(nickname: name, level: remote.level?.current, rank: rank, xp: xp, checkedAt: Date())
+            let updated = Player(nickname: name, level: remote.level?.current, rank: rank, xp: xp, checkedAt: Date(), rankImageURL: remote.rank?.image)
             player = updated
             // Record changes, not individual matches. A delta can cover multiple games.
             if points.last?.xp != xp || points.last?.rank != rank {
@@ -209,7 +211,7 @@ private struct Dashboard: View {
                         Label(error, systemImage: "exclamationmark.triangle.fill")
                             .font(.footnote).foregroundStyle(Theme.orange).card()
                     }
-                    Text("FAN-MADE • READ-ONLY  ·  Stats from an unofficial provider. No background polling.")
+                    Text("FAN PROJECT / READ-ONLY INTELLIGENCE • Unofficial provider. No background polling.")
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(Theme.secondary).padding(.horizontal, 4)
                         .padding(.bottom, 22)
@@ -217,7 +219,7 @@ private struct Dashboard: View {
                 .padding(.horizontal, 18)
                 .padding(.top, 18)
             }
-            .background(Theme.ink.ignoresSafeArea())
+            .background(OpsBackdrop().ignoresSafeArea())
             .toolbar(.hidden, for: .navigationBar)
             .refreshable { if connected { await store.refresh(uid: uid) } }
             .task(id: "\(uid):\(consent)") {
@@ -235,121 +237,194 @@ private struct Dashboard: View {
     }
 
     private var header: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "scope")
-                .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(Theme.ink)
-                .frame(width: 47, height: 47)
-                .background(Theme.yellow, in: RoundedRectangle(cornerRadius: 14))
-            VStack(alignment: .leading, spacing: 3) {
-                Text("SENSEI / COMMAND").tracking(2.1)
-                    .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                    .foregroundStyle(Theme.yellow)
-                Text("RANK INTELLIGENCE")
-                    .font(.system(size: 19, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
+        HStack(spacing: 11) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 9)
+                    .fill(Theme.yellow)
+                    .frame(width: 49, height: 49)
+                    .rotationEffect(.degrees(8))
+                Image(systemName: "scope")
+                    .font(.system(size: 25, weight: .black))
+                    .foregroundStyle(Theme.ink)
             }
-            Spacer(minLength: 2)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Rectangle().fill(Theme.yellow).frame(width: 17, height: 2)
+                    Text("SENSEI  /  TACTICAL DATA")
+                        .tracking(1.7)
+                        .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(Theme.yellow)
+                }
+                Text("RANK COMMAND")
+                    .font(.system(size: 23, weight: .black, design: .rounded))
+                    .tracking(-0.7)
+                    .foregroundStyle(.white)
+                    .minimumScaleFactor(0.8)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 1)
             Button { showSettings = true } label: {
                 Image(systemName: "gearshape.fill")
-                    .font(.title3)
-                    .frame(width: 41, height: 41)
-                    .background(Theme.elevated, in: Circle())
-            }.foregroundStyle(.white).accessibilityLabel("Account and settings")
+                    .font(.system(size: 19, weight: .semibold))
+                    .frame(width: 45, height: 45)
+                    .background(Theme.elevated, in: RoundedRectangle(cornerRadius: 13))
+                    .overlay(RoundedRectangle(cornerRadius: 13).stroke(Theme.yellow.opacity(0.3), lineWidth: 1))
+            }
+            .foregroundStyle(Theme.yellow)
+            .accessibilityLabel("Account and settings")
         }
+        .padding(.bottom, 3)
     }
 
     private func hero(_ player: Player) -> some View {
-        VStack(alignment: .leading, spacing: 17) {
-            HStack(alignment: .top, spacing: 15) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Theme.yellow.opacity(0.16))
-                        .frame(width: 82, height: 91)
-                    Image(systemName: "shield.lefthalf.filled")
-                        .font(.system(size: 45, weight: .regular))
-                        .foregroundStyle(Theme.yellow)
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.white)
-                        .offset(y: -2)
-                }
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 6) {
-                        Circle().fill(Theme.green).frame(width: 6, height: 6)
-                        Text("LATEST RANK DATA")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
-                            .foregroundStyle(Theme.green)
-                    }
-                    Text(player.rank.uppercased())
-                        .font(.system(size: 22, weight: .black, design: .rounded))
-                        .minimumScaleFactor(0.7).lineLimit(2)
-                    Text(player.nickname)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.83))
-                    Text("PLAYER LEVEL \(player.level.map(String.init) ?? "—")")
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .foregroundStyle(Theme.secondary)
-                }
-                Spacer(minLength: 0)
-            }
-            Rectangle().fill(Theme.line).frame(height: 1)
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("MULTIPLAYER RANKED XP").font(.system(size: 10, weight: .heavy, design: .monospaced))
-                        .foregroundStyle(Theme.secondary)
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(xp.formatted()).font(.system(size: 43, weight: .black, design: .rounded))
-                        Text("/ \(legendary.formatted())")
-                            .font(.system(size: 15, weight: .medium)).foregroundStyle(Theme.secondary)
-                    }.minimumScaleFactor(0.6).lineLimit(1)
-                }
-                Spacer()
-            }
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.13))
-                    Capsule().fill(LinearGradient(colors: [Theme.yellow, Theme.orange], startPoint: .leading, endPoint: .trailing))
-                        .frame(width: max(0, geometry.size.width * overallProgress))
-                }
-            }.frame(height: 10)
-            HStack {
-                Label("\(Int((overallProgress * 100).rounded()))% to Legendary", systemImage: "bolt.fill")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(Theme.yellow)
-                Spacer()
-                Text("\(remaining.formatted()) XP LEFT")
-                    .font(.system(size: 11, weight: .heavy, design: .monospaced))
-                    .foregroundStyle(Theme.secondary)
-            }
-            Button {
-                Task { await store.refresh(uid: uid) }
-            } label: {
-                HStack {
-                    if store.loading { ProgressView().tint(Theme.ink) }
-                    else { Image(systemName: "arrow.clockwise") }
-                    Text(store.loading ? "SYNCING…" : "SYNC RANK NOW")
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                }
-                .font(.system(size: 14, weight: .heavy, design: .monospaced))
-                .foregroundStyle(Theme.ink)
-                .padding(.horizontal, 16).frame(height: 48)
-                .background(Theme.yellow, in: RoundedRectangle(cornerRadius: 13))
-            }.disabled(store.loading)
-            HStack(spacing: 5) {
-                Image(systemName: "clock").foregroundStyle(Theme.secondary)
-                Text("Last checked: \(player.checkedAt.formatted(date: .abbreviated, time: .shortened))")
-            }.font(.system(size: 11)).foregroundStyle(Theme.secondary)
-        }
-        .padding(19)
-        .background(
+        ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: 23)
-                .fill(LinearGradient(colors: [Theme.card, Color(red: 0.17, green: 0.15, blue: 0.14)],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+                .fill(LinearGradient(colors: [
+                    Color(red: 0.18, green: 0.20, blue: 0.21),
+                    Theme.card,
+                    Color(red: 0.12, green: 0.11, blue: 0.13)
+                ], startPoint: .topLeading, endPoint: .bottomTrailing))
+            DiagonalCut().stroke(Theme.yellow.opacity(0.07), lineWidth: 1)
+                .clipShape(RoundedRectangle(cornerRadius: 23))
+            VStack(alignment: .leading, spacing: 15) {
+                HStack(spacing: 7) {
+                    Image(systemName: "dot.radiowaves.left.and.right")
+                        .foregroundStyle(Theme.yellow)
+                    Text("MULTIPLAYER  /  RANKED")
+                        .tracking(1.5)
+                        .foregroundStyle(.white.opacity(0.88))
+                    Spacer()
+                    Circle().fill(Theme.green).frame(width: 7, height: 7)
+                    Text("CONNECTED")
+                        .foregroundStyle(Theme.green)
+                }
+                .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                HStack(spacing: 5) {
+                    RankMedal(image: player.rankImageURL, rank: player.rank)
+                        .frame(width: 123, height: 128)
+                    VStack(alignment: .leading, spacing: 7) {
+                        Text("CURRENT DIVISION")
+                            .foregroundStyle(Theme.secondary)
+                            .tracking(1.1)
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        Text(player.rank.uppercased())
+                            .font(.system(size: 25, weight: .black, design: .rounded))
+                            .foregroundStyle(Theme.yellow)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.7)
+                        Text(player.nickname)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.white)
+                        HStack(spacing: 5) {
+                            Image(systemName: "person.crop.square.filled.and.at.rectangle")
+                            Text("LVL \(player.level.map(String.init) ?? "—")")
+                        }
+                        .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(Theme.secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                Rectangle().fill(Theme.yellow.opacity(0.3)).frame(height: 1)
+                HStack(alignment: .lastTextBaseline) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("CURRENT RANK XP")
+                            .foregroundStyle(Theme.secondary)
+                            .font(.system(size: 10, weight: .black, design: .monospaced))
+                            .tracking(1)
+                        Text(xp.formatted())
+                            .font(.system(size: 46, weight: .black, design: .rounded))
+                            .contentTransition(.numericText())
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                    }
+                    Spacer(minLength: 6)
+                    VStack(alignment: .trailing, spacing: 3) {
+                        Text("LEGENDARY")
+                            .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                            .foregroundStyle(Theme.secondary)
+                        Text(legendary.formatted())
+                            .font(.system(size: 19, weight: .black, design: .rounded))
+                            .foregroundStyle(Theme.yellow)
+                    }
+                }
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color.white.opacity(0.12))
+                        Capsule().fill(LinearGradient(colors: [Theme.yellow, Theme.orange],
+                                                     startPoint: .leading, endPoint: .trailing))
+                            .frame(width: max(0, geometry.size.width * overallProgress))
+                            .animation(.easeInOut(duration: 0.75), value: overallProgress)
+                        ForEach([6400, 6800, 7200, 7600], id: \.self) { milestone in
+                            Rectangle()
+                                .fill(Theme.ink.opacity(0.65))
+                                .frame(width: 3, height: 13)
+                                .position(x: geometry.size.width * Double(milestone) / Double(legendary), y: 7)
+                        }
+                    }
+                }.frame(height: 14)
+                HStack(alignment: .center) {
+                    Label("\(Int((overallProgress * 100).rounded()))% COMPLETE", systemImage: "bolt.fill")
+                        .foregroundStyle(Theme.yellow)
+                    Spacer()
+                    Text("\(remaining.formatted()) XP TO LEGENDARY")
+                        .foregroundStyle(.white.opacity(0.78))
+                }
+                .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                HStack(spacing: 9) {
+                    Image(systemName: "target")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(Theme.yellow)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(nextTier?.title.uppercased() ?? "LEGENDARY UNLOCKED")
+                            .font(.system(size: 12, weight: .heavy, design: .monospaced))
+                        Text(nextTier.map { "\($0.threshold - xp) XP until next promotion" } ?? "Maximum ranked division reached")
+                            .font(.system(size: 10)).foregroundStyle(Theme.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.up.2").foregroundStyle(Theme.yellow)
+                }
+                .padding(11)
+                .background(Theme.ink.opacity(0.58), in: RoundedRectangle(cornerRadius: 11))
+                Button {
+                    Task { await store.refresh(uid: uid) }
+                } label: {
+                    HStack {
+                        if store.loading { ProgressView().tint(Theme.ink) }
+                        else { Image(systemName: "arrow.triangle.2.circlepath") }
+                        Text(store.loading ? "CONTACTING SERVICE…" : "SYNC LIVE XP")
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                    }
+                    .font(.system(size: 13, weight: .black, design: .monospaced))
+                    .foregroundStyle(Theme.ink)
+                    .padding(.horizontal, 17)
+                    .frame(height: 50)
+                    .background(
+                        LinearGradient(colors: [Theme.yellow, Color(red: 1, green: 0.65, blue: 0.13)],
+                                       startPoint: .leading, endPoint: .trailing),
+                        in: RoundedRectangle(cornerRadius: 11))
+                }
+                .disabled(store.loading)
+                HStack(spacing: 5) {
+                    Image(systemName: "clock.arrow.circlepath")
+                    Text("Last fetched: \(player.checkedAt.formatted(date: .abbreviated, time: .shortened))")
+                    Spacer()
+                    Text("V0.3")
+                }
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .foregroundStyle(Theme.secondary)
+            }
+            .padding(18)
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 23)
+                .stroke(LinearGradient(colors: [Theme.yellow.opacity(0.65), Theme.yellow.opacity(0.04), Theme.yellow.opacity(0.28)],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.25)
         )
-        .overlay(RoundedRectangle(cornerRadius: 23).stroke(Theme.yellow.opacity(0.26), lineWidth: 1))
+        .shadow(color: Theme.yellow.opacity(0.08), radius: 20)
     }
+
 
     private var overview: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -372,73 +447,119 @@ private struct Dashboard: View {
     }
 
     private func stat(_ title: String, _ number: String, _ symbol: String, _ accent: Color, _ info: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: symbol).font(.system(size: 15, weight: .bold)).foregroundStyle(accent)
-                Spacer()
-                Rectangle().fill(accent).frame(width: 20, height: 2)
+        ZStack(alignment: .topTrailing) {
+            RoundedRectangle(cornerRadius: 17)
+                .fill(LinearGradient(colors: [accent.opacity(0.16), Theme.card, Theme.card],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+            Image(systemName: symbol)
+                .font(.system(size: 63, weight: .ultraLight))
+                .foregroundStyle(accent.opacity(0.09))
+                .offset(x: 8, y: 4)
+                .clipped()
+            VStack(alignment: .leading, spacing: 7) {
+                HStack {
+                    Image(systemName: symbol)
+                        .foregroundStyle(accent)
+                        .font(.system(size: 17, weight: .bold))
+                    Spacer()
+                    Circle().fill(accent).frame(width: 5, height: 5)
+                    Circle().fill(accent.opacity(0.4)).frame(width: 5, height: 5)
+                }
+                Spacer(minLength: 4)
+                Text(number)
+                    .font(.system(size: 31, weight: .black, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+                Text(title)
+                    .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(accent)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(info)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Text(number)
-                .font(.system(size: 26, weight: .heavy, design: .rounded))
-                .foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.75)
-            Text(title)
-                .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                .foregroundStyle(Theme.secondary).lineLimit(2).fixedSize(horizontal: false, vertical: true)
-            Text(info).font(.system(size: 10)).foregroundStyle(Theme.secondary.opacity(0.8))
-                .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            .padding(14)
         }
-        .frame(maxWidth: .infinity, minHeight: 138, alignment: .topLeading)
-        .padding(14)
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: 17))
-        .overlay(RoundedRectangle(cornerRadius: 17).stroke(Theme.line, lineWidth: 1))
+        .frame(maxWidth: .infinity, minHeight: 151)
+        .overlay(RoundedRectangle(cornerRadius: 17).stroke(accent.opacity(0.23), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 17))
     }
 
+
     private var climb: some View {
-        VStack(alignment: .leading, spacing: 13) {
-            sectionTitle("ROAD TO LEGENDARY", subtitle: "Your next Grand Master milestones")
+        VStack(alignment: .leading, spacing: 14) {
+            sectionTitle("PROMOTION ROUTE", subtitle: "Five checkpoints to Legendary")
             if let next = nextTier {
-                HStack(alignment: .top) {
+                HStack(spacing: 12) {
+                    Image(systemName: "scope")
+                        .font(.system(size: 25, weight: .heavy))
+                        .foregroundStyle(Theme.ink)
+                        .frame(width: 49, height: 49)
+                        .background(Theme.yellow, in: RoundedRectangle(cornerRadius: 11))
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("NEXT CHECKPOINT")
-                            .font(.system(size: 10, weight: .heavy, design: .monospaced)).foregroundStyle(Theme.secondary)
-                        Text(next.title)
-                            .font(.system(size: 22, weight: .heavy, design: .rounded))
+                        Text("NEXT RANK")
+                            .tracking(1)
+                            .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                            .foregroundStyle(Theme.secondary)
+                        Text(next.title.uppercased())
+                            .font(.system(size: 17, weight: .black, design: .rounded))
                     }
-                    Spacer()
-                    Text("\(max(0, next.threshold - xp).formatted()) XP")
-                        .font(.system(size: 16, weight: .black, design: .rounded))
-                        .foregroundStyle(Theme.yellow)
+                    Spacer(minLength: 3)
+                    VStack(alignment: .trailing, spacing: 3) {
+                        Text("\(max(0, next.threshold - xp).formatted())")
+                            .font(.system(size: 25, weight: .black, design: .rounded))
+                            .foregroundStyle(Theme.yellow)
+                        Text("XP LEFT")
+                            .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                            .foregroundStyle(Theme.secondary)
+                    }
                 }
+                .padding(12)
+                .background(Theme.ink, in: RoundedRectangle(cornerRadius: 13))
             } else {
-                Label("LEGENDARY ACHIEVED", systemImage: "crown.fill")
+                Label("LEGENDARY REACHED", systemImage: "crown.fill")
                     .font(.title3.bold()).foregroundStyle(Theme.yellow)
             }
-            VStack(spacing: 12) {
-                ForEach(rankTiers) { tier in
-                    HStack(spacing: 10) {
-                        Image(systemName: xp >= tier.threshold ? "checkmark.circle.fill" : "circle")
-                            .foregroundStyle(xp >= tier.threshold ? Theme.green : Theme.secondary)
-                            .font(.system(size: 17))
-                        Text(tier.shortName).font(.system(size: 12, weight: .bold, design: .monospaced))
-                        Spacer()
-                        Text(tier.threshold.formatted()).font(.system(size: 12, design: .monospaced))
-                            .foregroundStyle(Theme.secondary)
-                        if xp < tier.threshold {
-                            Text("−\(tier.threshold - xp)")
-                                .font(.system(size: 11, weight: .heavy, design: .monospaced))
-                                .foregroundStyle(tier.id == nextTier?.id ? Theme.yellow : Theme.secondary)
-                                .frame(width: 57, alignment: .trailing)
-                        } else {
-                            Text("DONE").font(.system(size: 10, weight: .heavy, design: .monospaced))
-                                .foregroundStyle(Theme.green).frame(width: 57, alignment: .trailing)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(rankTiers) { tier in
+                        let completed = xp >= tier.threshold
+                        let upcoming = nextTier?.id == tier.id
+                        VStack(spacing: 8) {
+                            ZStack {
+                                Circle()
+                                    .fill(completed ? Theme.green.opacity(0.18) : upcoming ? Theme.yellow.opacity(0.20) : Theme.elevated)
+                                    .frame(width: 52, height: 52)
+                                Circle()
+                                    .stroke(completed ? Theme.green : upcoming ? Theme.yellow : Theme.line, lineWidth: 1.5)
+                                    .frame(width: 52, height: 52)
+                                Image(systemName: completed ? "checkmark.seal.fill" : tier.threshold == legendary ? "crown.fill" : "shield.fill")
+                                    .font(.system(size: 23))
+                                    .foregroundStyle(completed ? Theme.green : upcoming ? Theme.yellow : Theme.secondary)
+                            }
+                            Text(tier.shortName)
+                                .font(.system(size: 10, weight: .black, design: .monospaced))
+                                .foregroundStyle(upcoming ? Theme.yellow : .white)
+                            Text(tier.threshold.formatted())
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(Theme.secondary)
                         }
+                        .frame(width: 69)
                     }
                 }
+                .padding(.vertical, 5)
             }
-            Text("Milestones use the published Grand Master tier thresholds; rank shown above comes from the live service.")
+            Text("Markers are the published rank-XP thresholds. Live rank comes from the provider.")
                 .font(.system(size: 10)).foregroundStyle(Theme.secondary)
-        }.card()
+        }
+        .card()
     }
+
 
     private var trends: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -604,7 +725,7 @@ private struct Dashboard: View {
                     Text("The service is unofficial and its availability and authorization are not guaranteed. It receives your UID and IP when you sync. No background polling or game modification.")
                     Link("Activision Terms", destination: URL(string: "https://www.activision.com/legal/terms-of-use")!)
                 }
-                Section("Version") { Text("CODM Rank Tracker v0.2.0") }
+                Section("Version") { Text("CODM Rank Tracker v0.3.0") }
             }
             .navigationTitle("Tracker Settings")
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { showSettings = false } } }
@@ -612,12 +733,24 @@ private struct Dashboard: View {
     }
 
     private func sectionTitle(_ title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title).font(.system(size: 13, weight: .black, design: .monospaced))
-                .tracking(0.8).foregroundStyle(.white)
-            Text(subtitle).font(.system(size: 11)).foregroundStyle(Theme.secondary)
+        HStack(alignment: .top, spacing: 9) {
+            Rectangle()
+                .fill(LinearGradient(colors: [Theme.yellow, Theme.orange],
+                                     startPoint: .top, endPoint: .bottom))
+                .frame(width: 3, height: 30)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 13, weight: .black, design: .monospaced))
+                    .tracking(0.6)
+                    .foregroundStyle(.white)
+                Text(subtitle)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Theme.secondary)
+            }
         }
     }
+
+
     private func signed(_ value: Int?) -> String {
         guard let value else { return "—" }
         return signed(value)
@@ -633,5 +766,109 @@ private extension View {
             .padding(17)
             .background(Theme.card, in: RoundedRectangle(cornerRadius: 21))
             .overlay(RoundedRectangle(cornerRadius: 21).stroke(Theme.line, lineWidth: 0.8))
+    }
+}
+
+
+private struct DiagonalCut: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        for x in stride(from: -rect.height, through: rect.width, by: 24.0) {
+            path.move(to: CGPoint(x: x, y: 0))
+            path.addLine(to: CGPoint(x: x + rect.height, y: rect.height))
+        }
+        return path
+    }
+}
+
+private struct OpsBackdrop: View {
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                Theme.ink
+                RadialGradient(colors: [Theme.yellow.opacity(0.12), .clear],
+                               center: .topTrailing, startRadius: 10, endRadius: 390)
+                DiagonalCut()
+                    .stroke(Theme.yellow.opacity(0.025), lineWidth: 0.8)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                VStack {
+                    HStack {
+                        Spacer()
+                        Image(systemName: "scope")
+                            .font(.system(size: 230, weight: .ultraLight))
+                            .foregroundStyle(Theme.yellow.opacity(0.027))
+                            .offset(x: 45, y: 20)
+                    }
+                    Spacer()
+                }
+            }
+            .frame(width: geometry.size.width, height: geometry.size.height)
+        }
+    }
+}
+
+private struct RankMedal: View {
+    let image: String?
+    let rank: String
+
+    private var remoteURL: URL? {
+        guard let image, let url = URL(string: image), url.scheme == "https",
+              let hostname = url.host?.lowercased(),
+              hostname == "codashop.com" || hostname.hasSuffix(".codashop.com") else { return nil }
+        return url
+    }
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(RadialGradient(colors: [Theme.yellow.opacity(0.3), Theme.yellow.opacity(0.02), .clear],
+                                     center: .center, startRadius: 4, endRadius: 65))
+                .frame(width: 128, height: 128)
+            Circle()
+                .trim(from: 0.05, to: 0.42)
+                .stroke(Theme.yellow.opacity(0.7), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                .frame(width: 105, height: 105)
+                .rotationEffect(.degrees(-105))
+            Circle()
+                .trim(from: 0.1, to: 0.42)
+                .stroke(Theme.orange.opacity(0.7), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                .frame(width: 105, height: 105)
+                .rotationEffect(.degrees(90))
+            if let url = remoteURL {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let rendered):
+                        rendered.resizable().scaledToFit().padding(4)
+                    case .empty, .failure:
+                        fallback
+                    @unknown default:
+                        fallback
+                    }
+                }
+                .frame(width: 112, height: 112)
+            } else {
+                fallback.frame(width: 110, height: 110)
+            }
+            Image(systemName: "star.fill")
+                .font(.system(size: 10))
+                .foregroundStyle(Theme.yellow)
+                .offset(y: 55)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Current rank emblem: \(rank)")
+    }
+
+    private var fallback: some View {
+        ZStack {
+            Image(systemName: "shield.lefthalf.filled")
+                .font(.system(size: 75, weight: .light))
+                .foregroundStyle(LinearGradient(colors: [Theme.yellow, Theme.orange, Theme.yellow],
+                                                 startPoint: .topLeading, endPoint: .bottomTrailing))
+                .shadow(color: Theme.yellow.opacity(0.35), radius: 6)
+            Image(systemName: "star.circle.fill")
+                .font(.system(size: 29))
+                .foregroundStyle(.white)
+                .shadow(color: Theme.ink.opacity(0.7), radius: 4)
+        }
     }
 }
