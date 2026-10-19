@@ -61,7 +61,7 @@ jobs:
             assert.ok(!html.includes(forbidden),'forbidden UI '+forbidden);
           assert.ok(js.includes('displayArt("rankArt","badgeUnavailable",player.rankArt)'));
           assert.ok(js.includes('Math.min(1,maxWidth/width,maxHeight/height)'));
-          assert.ok(js.includes('function allowedArt(raw)'));
+          assert.ok(js.includes('function allowedArt(raw,avatar=false)'));
           assert.ok(!fs.existsSync('codm-pwa/rank-art.js'));
           for(const marker of ['rankcommand-xp-backup','requestedUID=uid','data.uid!==uid',
                                 'data.readings.every(valid)','RANKS.promotion(player.xp)',
