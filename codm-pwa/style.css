@@ -305,3 +305,69 @@ footer p{font-size:10px}
  .section-label small{max-width:42%}
 }
 @media(prefers-reduced-motion:reduce){.pane{animation:none}}
+
+
+/* RELEASE 03 / SIGNATURE TYPE: purposeful gaming typography, distinct hierarchy */
+:root{
+ --font-display:"Teko","Arial Narrow",Impact,sans-serif;
+ --font-interface:"Oxanium","Arial Narrow",system-ui,sans-serif;
+ --font-data:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace
+}
+body{font-family:var(--font-interface);font-weight:500;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+input,button{font-family:var(--font-interface)}
+.brand strong{font-family:var(--font-display);font-size:clamp(37px,9.3vw,51px);font-weight:700;line-height:.77;letter-spacing:.015em;padding:6px 0 8px;white-space:nowrap}
+.brand-slash{color:var(--gold);margin:0 2px;font-weight:500}
+.brand small{font-family:var(--font-data);font-size:clamp(7px,1.85vw,9px);font-weight:600;letter-spacing:.05em;line-height:1.45}
+.brandmark span{font-family:var(--font-display);font-weight:700;font-size:30px;letter-spacing:-.02em;line-height:1.3}
+.networkstate,.hero-top,.section-label small,.section-eyebrow{font-family:var(--font-data)!important;font-weight:600!important;letter-spacing:.015em}
+.networkstate{font-size:9px}
+.hero-top{font-size:10px}
+.identity-info h2{font-family:var(--font-display);font-weight:700;font-size:clamp(42px,12vw,74px);letter-spacing:.02em;line-height:.87;margin:1px 0 13px;max-width:100%}
+.identity-info small,.identity-info #levelBadge{font-family:var(--font-data);font-weight:700;font-size:9px;letter-spacing:.04em}
+.identity-info b{font-family:var(--font-interface);font-weight:800;font-size:13px;letter-spacing:.015em}
+.charge-hint{font-family:var(--font-data)!important;font-size:8px!important;letter-spacing:0!important;font-weight:500!important}
+.progress-head strong{font-family:var(--font-display);font-size:clamp(80px,22vw,126px);line-height:.74;letter-spacing:.015em;font-weight:700;padding-top:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.progress-head small,.progress-meta,.next-checkpoint small{font-family:var(--font-data)!important;font-weight:600!important;letter-spacing:.015em}
+.progress-head small{font-size:9px}
+.progress-goal b{font-family:var(--font-display);font-weight:700;font-size:clamp(35px,10vw,56px);line-height:.82;letter-spacing:.02em}
+.next-checkpoint b,.next-checkpoint strong{font-family:var(--font-display);font-weight:700;font-size:25px;letter-spacing:.03em;line-height:1}
+.next-checkpoint strong{font-size:29px}
+.section-label b{font-family:var(--font-interface);font-weight:800;font-size:clamp(14px,3.65vw,19px);letter-spacing:.02em;line-height:1.2}
+.section-label small{font-size:9px}
+.tabs button{font-family:var(--font-interface);font-weight:800;font-size:10px;letter-spacing:0;line-height:1.2}
+.tabs button span{font-family:var(--font-interface);font-weight:700}
+.primary,.secondary,.danger,.range-buttons button,.gain-choices button{font-family:var(--font-interface);font-weight:800;letter-spacing:.04em;font-size:12px}
+.connect-card h1{font-family:var(--font-display);font-weight:700;font-size:clamp(63px,16vw,109px);letter-spacing:.02em;line-height:.83;margin:23px 0 21px}
+.connect-card>p{font-family:var(--font-interface);font-weight:500;line-height:1.6}
+.connect-card label:not(.consent),.connect-card input[type=text]{font-family:var(--font-data);letter-spacing:.015em}
+.connect-card input[type=text]{font-size:16px}
+.profile-hero h2{font-family:var(--font-display);font-size:clamp(40px,10vw,60px);font-weight:700;line-height:.9}
+.metric{gap:9px}
+.metric strong{font-family:var(--font-display);font-weight:700;font-size:clamp(44px,13vw,66px);letter-spacing:.015em;line-height:.78;font-variant-numeric:tabular-nums}
+.metric small,.metric span{font-family:var(--font-data);letter-spacing:0;line-height:1.35}
+.metric small{font-size:9px;font-weight:600}
+.metric span{font-size:10px;font-weight:500}
+.milestone b{font-family:var(--font-interface);font-weight:800;font-size:12px;letter-spacing:.02em}
+.milestone .badge{font-family:var(--font-display);font-size:23px;line-height:1}
+.milestone small,.plan-summary small,.data-row span,.history-row small{font-family:var(--font-data);font-weight:600;font-size:9px;letter-spacing:.01em}
+.plan-summary strong{font-family:var(--font-display);font-weight:700;font-size:clamp(59px,15vw,86px);line-height:.77;letter-spacing:.02em}
+.data-row strong,.archive-actions button,.coverage b{font-family:var(--font-interface);font-weight:700}
+#archiveCount,.hd-art-notice,footer span{font-family:var(--font-data);letter-spacing:.02em}
+.small,footer p,.coverage p{font-family:var(--font-interface);font-weight:500;font-size:11px;line-height:1.65}
+@media(min-width:600px){
+ .identity-info h2{font-size:clamp(58px,8vw,85px)}
+ .progress-head strong{font-size:clamp(108px,15vw,150px)}
+ .metric strong{font-size:58px}
+ .connect-card h1{font-size:110px}
+}
+@media(max-width:380px){
+ .brand strong{font-size:clamp(31px,8.5vw,38px)}
+ .identity-info h2{font-size:clamp(35px,11vw,45px)}
+ .progress-head strong{font-size:clamp(70px,21vw,88px)}
+ .progress-goal b{font-size:clamp(31px,9vw,38px)}
+ .section-label b{font-size:14px}
+ .tabs button{font-size:9px;letter-spacing:0}
+ .metric strong{font-size:45px}
+ .next-checkpoint b{font-size:22px}
+ .connect-card h1{font-size:clamp(55px,16vw,68px)}
+}
