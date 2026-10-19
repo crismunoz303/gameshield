@@ -18,6 +18,7 @@ jobs:
         run: |
           node --check codm-pwa/app.js
           node --check codm-pwa/progression.js
+          node --check codm-pwa/meta.js
           node --check codm-pwa/sw.js
           node --check codm-pwa/api/player.js
       - name: Test every rank and all major interfaces
@@ -94,6 +95,35 @@ jobs:
           assert.ok(js.includes('showNavigationDock()'));
           assert.ok(js.includes('document.documentElement.scrollTop=0'));
           assert.ok(sw.includes('/progression.js'));
-          assert.ok(sw.includes('rankcommand-static-v13'));
+          assert.ok(sw.includes('rankcommand-static-v14'));
+
+          assert.ok(sw.includes('/meta.js'));
+          assert.ok(html.includes('src="/meta.js"'));
+          assert.ok(html.indexOf('/meta.js')<html.indexOf('/app.js'));
+          assert.ok(html.includes('data-tab="meta"'));
+          for(const id of ['metaWeapons','metaAttachments','metaTTK','metaCopy','metaSourceLink','metaSourceText','metaNotes'])
+            assert.ok(html.includes('id="'+id+'"'),'missing meta UI '+id);
+          assert.ok(js.includes('if(tab==="meta")renderMeta()'));
+          assert.ok(js.includes('build.ttk==null?"NOT VERIFIED"'));
+          assert.ok(css.includes('.meta-weapons'));
+          assert.ok(css.includes('grid-template-columns:repeat(5,minmax(0,1fr))'));
+          const meta=require('./codm-pwa/meta.js');
+          assert.equal(meta.season.label,'SEASON 9 // VAMPIRES VS WEREWOLVES');
+          assert.equal(meta.entries.length,6);
+          const seen=new Set();
+          for(const entry of meta.entries){
+            assert.ok(!seen.has(entry.id),'duplicate meta '+entry.id);
+            seen.add(entry.id);
+            assert.ok(['AR','SMG'].includes(entry.class));
+            assert.equal(entry.attachments.length,5);
+            assert.equal(entry.ttk,null,'Unverified TTK cannot be published as numeric');
+            assert.equal(entry.ttkStatus,'NOT VERIFIED');
+            assert.ok(/^https:\\/\\//.test(entry.url));
+            for(const part of entry.attachments){
+              assert.ok(part.slot.length>1&&part.name.length>2);
+            }
+          }
+          console.log('PASS: 6 sourced loadouts, all 5 slots, verified-only TTK policy, fifth tab, unchanged original rank art');
+
           console.log('PASS: all seven ranks, GM checkpoints, original artwork, UID safety, backup controls, responsive styling');
           NODE
