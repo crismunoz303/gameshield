@@ -19,8 +19,8 @@ targets:
         GENERATE_INFOPLIST_FILE: 'YES'
         INFOPLIST_KEY_CFBundleDisplayName: CODM Rank Tracker
         INFOPLIST_KEY_UILaunchScreen_Generation: 'YES'
-        MARKETING_VERSION: 0.3.0
-        CURRENT_PROJECT_VERSION: 4
+        MARKETING_VERSION: 0.4.0
+        CURRENT_PROJECT_VERSION: 5
         CODE_SIGN_STYLE: Manual
 schemes:
   CODMRank:
