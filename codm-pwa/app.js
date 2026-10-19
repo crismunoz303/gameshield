@@ -1,14 +1,12 @@
 "use strict";
 const $ = id => document.getElementById(id);
-const LEGENDARY = 8001;
-const RANKS = window.RankProgress;
 const STORAGE_PREFIX = "rankcommand-web-v1-";
 const fmt = x => x == null || !Number.isFinite(x) ? "—" : Math.round(x).toLocaleString("en-US");
 const signed = x => x == null || !Number.isFinite(x) ? "—" : (x > 0 ? "+" : "") + fmt(x);
 const safeText = (id,text) => { const el=$(id); if(el)el.textContent=String(text??"—"); };
 const validUID = value => /^\d{12,22}$/.test(value);
 const own = (object,key) => Object.prototype.hasOwnProperty.call(object,key);
-let uid="", player=null, readings=[], range="all", chosenGain=50, refreshing=false, timer=null;
+let uid="", player=null, readings=[], range="all", refreshing=false, timer=null;
 let currentTab="command";
 function load(key,fallback){try{const raw=localStorage.getItem(STORAGE_PREFIX+key);return raw?JSON.parse(raw):fallback}catch{return fallback}}
 function store(key,value){try{localStorage.setItem(STORAGE_PREFIX+key,JSON.stringify(value))}catch{}}
