@@ -593,3 +593,14 @@ body:after{
 .rank-reference-note a{color:#ff9da8;text-decoration:underline}
 @media(min-width:640px){.blueprint-list{grid-template-columns:repeat(3,minmax(0,1fr))}.blueprint-filters{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:380px){.blueprint-card{padding:10px 7px}.blueprint-card b{font-size:10px}.blueprint-detail-row{grid-template-columns:minmax(0,1fr) 86px}.blueprint-detail-row h2{font-size:28px}.blueprint-fact{grid-template-columns:minmax(0,40%) minmax(0,60%)}.blueprint-filters button{font-size:8px}}
+
+/* RELEASE 08: single-column factual detail, no empty TTK/unknown-rarity column */
+.meta-detail-head,.blueprint-detail-row{grid-template-columns:minmax(0,1fr);gap:0}
+.meta-detail-head>div:first-child,.blueprint-detail-row>div:first-child{max-width:100%}
+.blueprint-list .blueprint-card{justify-content:flex-start}
+.confirmed-rating{padding-bottom:9px}
+.metric-context{margin:4px 0 16px!important;color:#b1babc}
+.meta-footnote{padding:8px 0;color:#adb9b8}
+@media(min-width:640px){
+ .meta-detail-head,.blueprint-detail-row{grid-template-columns:minmax(0,1fr)}
+}
