@@ -415,3 +415,33 @@ body:after{
  .operator-quick strong{font-size:53px}
  .archive-actions button{font-size:12px}
 }
+
+
+/* Mobile browser chrome / scroll ergonomics: avoid status-bar content collisions
+   and retract HUD navigation while the player reads long operator records. */
+@supports (-webkit-touch-callout: none){
+  #app{padding-top:max(76px, calc(env(safe-area-inset-top, 0px) + 24px))}
+  body:after{
+    height:max(57px,calc(env(safe-area-inset-top,0px) + 8px));
+    background:linear-gradient(to bottom,#090d10 0%,#090d10 87%,#090d10ee 100%);
+  }
+}
+.tabs{
+  will-change:transform,opacity;
+  transition:transform 230ms cubic-bezier(.22,.78,.2,1),opacity 180ms ease;
+}
+.tabs.dock-retracted{
+  transform:translate(-50%,calc(100% + 120px));
+  opacity:0;
+  pointer-events:none;
+}
+@media(prefers-reduced-motion:reduce){
+  .tabs{transition:none}
+}
+@media(max-width:440px){
+  .screen-intro{padding-top:9px}
+  .screen-intro .overline{line-height:1.5}
+  .screen-intro h1{font-size:clamp(49px,13.4vw,66px);line-height:.88;letter-spacing:0}
+  .profile-hero{margin-top:5px}
+  #app{padding-bottom:calc(176px + env(safe-area-inset-bottom))}
+}
