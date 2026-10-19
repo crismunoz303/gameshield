@@ -141,7 +141,7 @@ function showTab(tab){
     requestAnimationFrame(()=>window.scrollTo(0,0));
   }
   if(tab==="analytics")requestAnimationFrame(drawChart);
-  if(tab==="meta")renderMeta();
+  if(tab==="meta")switchWeaponMode(weaponMode);
 }
 function deltaAt(i){return i>0?readings[i].xp-readings[i-1].xp:null}
 function netWithin(ms){
@@ -503,6 +503,67 @@ window.addEventListener("scroll",()=>{
     previousDockY=y;
   });
 },{passive:true});
+
+
+const BLUEPRINTS=window.RankBlueprints;
+let weaponMode="gunsmith", blueprintFilter="ALL", blueprintQuery="", blueprintActiveId=null;
+function switchWeaponMode(mode){
+  weaponMode=mode==="blueprints"?"blueprints":"gunsmith";
+  $("metaGunsmith").hidden=weaponMode!=="gunsmith";
+  $("metaBlueprints").hidden=weaponMode!=="blueprints";
+  for(const [id,key] of [["modeGunsmith","gunsmith"],["modeBlueprints","blueprints"]]){
+    const active=key===weaponMode,b=$(id);
+    b.classList.toggle("selected",active);
+    b.setAttribute("aria-pressed",String(active));
+  }
+  if(weaponMode==="blueprints")renderBlueprints();
+  else renderMeta();
+}
+function renderBlueprints(){
+  const list=$("blueprintList");list.replaceChildren();
+  const q=blueprintQuery.trim().toLowerCase();
+  const matches=BLUEPRINTS.filter(x=>
+    (blueprintFilter==="ALL"||(blueprintFilter==="UNKNOWN"?x.rarity===null:x.rarity===blueprintFilter))&&
+    (!q||(x.weapon+" "+x.blueprint+" "+x.season).toLowerCase().includes(q))
+  );
+  safeText("blueprintCount",matches.length+" OFFICIAL ANNOUNCEMENTS MATCH");
+  document.querySelectorAll("[data-blueprint-filter]").forEach(button=>{
+    const active=button.dataset.blueprintFilter===blueprintFilter;
+    button.classList.toggle("selected",active);
+    button.setAttribute("aria-pressed",String(active));
+  });
+  if(!matches.length){
+    const p=document.createElement("p");p.className="history-empty";
+    p.textContent="No documented blueprints match these filters.";
+    list.append(p);$("blueprintDetail").hidden=true;return;
+  }
+  if(!matches.some(x=>x.id===blueprintActiveId))blueprintActiveId=matches[0].id;
+  matches.forEach(entry=>{
+    const b=document.createElement("button");b.type="button";
+    b.className="blueprint-card"+(entry.id===blueprintActiveId?" selected":"");
+    b.setAttribute("aria-pressed",String(entry.id===blueprintActiveId));
+    const rarity=document.createElement("span");rarity.className="blueprint-tier";rarity.textContent=entry.rarity??"RARITY NOT STATED";
+    const weapon=document.createElement("strong");weapon.textContent=entry.weapon;
+    const title=document.createElement("b");title.textContent=entry.blueprint;
+    const season=document.createElement("small");season.textContent=entry.season+" / OFFICIAL";
+    b.append(rarity,weapon,title,season);
+    b.addEventListener("click",()=>{blueprintActiveId=entry.id;renderBlueprints()});
+    list.append(b);
+  });
+  const selected=matches.find(x=>x.id===blueprintActiveId);
+  $("blueprintDetail").hidden=false;
+  safeText("blueprintTitle",selected.weapon+" — "+selected.blueprint);
+  safeText("blueprintSeason",selected.season+" / VERIFIED ANNOUNCEMENT");
+  safeText("blueprintRarity",selected.rarity??"RARITY NOT STATED BY SOURCE");
+  safeText("blueprintRelease",selected.release);
+  $("blueprintSource").href=selected.sourceUrl;
+}
+$("modeGunsmith").addEventListener("click",()=>switchWeaponMode("gunsmith"));
+$("modeBlueprints").addEventListener("click",()=>switchWeaponMode("blueprints"));
+$("blueprintSearch").addEventListener("input",event=>{blueprintQuery=event.target.value;renderBlueprints()});
+document.querySelectorAll("[data-blueprint-filter]").forEach(button=>button.addEventListener("click",()=>{
+  blueprintFilter=button.dataset.blueprintFilter;renderBlueprints();
+}));
 
 // Gunsmith information is editorial, NOT read from the player's CODM account.
 // Never present a time-to-kill value unless it has been independently measured
