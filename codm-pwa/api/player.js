@@ -4,11 +4,20 @@ const UPSTREAM = "https://callofdutymobile.vercel.app/user/";
 const uidPattern = /^\d{12,22}$/;
 const lookupCache = new Map();
 const CACHE_MS = 20000;
-function picture(value){
+function picture(value,avatar=false){
   if(typeof value!=="string"||value.length>1500)return null;
-  try {const url=new URL(value), host=url.hostname.toLowerCase();
-    return url.protocol==="https:"&&(host==="codashop.com"||host.endsWith(".codashop.com"))?url.href:null;
-  } catch {return null}
+  try{
+    const url=new URL(value),host=url.hostname.toLowerCase();
+    const publicHost=/^[a-z0-9][a-z0-9.-]*[a-z0-9]$/.test(host)&&host.includes(".")&&
+      !host.includes("..")&&!host.endsWith(".local")&&!host.endsWith(".localhost")&&
+      !host.endsWith(".internal")&&!/^[0-9.]+$/.test(host);
+    if(url.protocol!=="https:"||url.username||url.password||!publicHost||
+       (url.port&&url.port!=="443"))return null;
+    // CODM rank and level art stays Codashop-only. An avatar can legitimately
+    // use a different public HTTPS image host returned by the player provider.
+    if(!avatar&&host!=="codashop.com"&&!host.endsWith(".codashop.com"))return null;
+    return url.href;
+  }catch{return null}
 }
 function text(value,n=100){return typeof value==="string"?value.slice(0,n):null}
 function numeric(value){const parsed=Number(value);return Number.isFinite(parsed)&&parsed>=0?parsed:null}
@@ -40,7 +49,7 @@ module.exports = async function handler(req,res){
     if(source?.success!==true||rating==null||!rank||!nickname)
       return res.status(502).json({error:"The stats service didn't return usable player details."});
     const data={
-      success:true,nickname,pic:picture(source.pic),
+      success:true,nickname,pic:picture(source.pic,true),
       countryCode:text(source.countryCode,4),
       countryId:source.countryId==null?null:String(source.countryId).slice(0,32),
       shortId:source.shortId==null?null:String(source.shortId).slice(0,64),
