@@ -162,13 +162,13 @@ function render(){
   safeText("playerName",player.nickname);
   safeText("levelBadge","LEVEL "+(player.level??"—"));
   safeText("currentXP",fmt(player.xp));
-  safeText("percent",Math.round(RANKS.progress(player.xp))+"% TO LEGENDARY");
-  safeText("xpRemaining",promotion.complete?"LEGENDARY REACHED":fmt(remaining)+" XP TO LEGENDARY");
+  safeText("percent",Math.round(RANKS.progress(player.xp))+"% OF 2023 GUIDE BENCHMARK");
+  safeText("xpRemaining",promotion.complete?"2023 GUIDE BENCHMARK REACHED":fmt(remaining)+" XP TO 2023 GUIDE BENCHMARK");
   $("progressBar").style.width=RANKS.progress(player.xp)+"%";
   document.querySelector(".track").setAttribute("aria-valuenow",String(Math.min(LEGENDARY,player.xp)));
-  safeText("nextTier",promotion.complete?"LEGENDARY":" "+promotion.label);
+  safeText("nextTier",promotion.complete?"LEGENDARY REFERENCE":promotion.label);
   safeText("nextXP",promotion.complete?"✓":fmt(promotion.remaining)+" XP");
-  safeText("checkpointNote",promotion.estimated?"Estimated GM subdivision threshold · game display takes precedence":"");
+  safeText("checkpointNote","Historical guide only · current threshold not verified");
   safeText("liveBadge","LAST READING");
   safeText("lastCheck",new Date(player.checkedAt).toLocaleString(undefined,{hour:"numeric",minute:"2-digit"}));
   displayArt("rankArt","badgeUnavailable",player.rankArt);
@@ -188,24 +188,22 @@ function renderMilestones(){
   const upcoming=RANKS.next(player.xp);
   const marks=RANKS.nearby(player.xp,6);
   const band=RANKS.currentBand(player.xp);
-  safeText("promotionContext",band.name+" → LEGENDARY");
-  safeText("milestoneNote",marks.some(x=>x.estimated)
-    ?"Grand Master subdivisions are approximate checkpoints; your in-game division and provider rank take priority."
-    :"Rank thresholds are guide-based; the provider's actual displayed rank takes priority.");
-  marks.forEach(({label,at,estimated})=>{
+  safeText("promotionContext","2023 GUIDE / "+band.name);
+  safeText("milestoneNote","Published in 2023, not verified for current season. Your actual rank comes from the player provider.");
+  marks.forEach(({label,at})=>{
     const passed=player.xp>=at;
     const isNext=upcoming?.at===at;
     const el=document.createElement("button");el.type="button";
     el.className="milestone"+(passed?" done":isNext?" next":"");
-    el.setAttribute("aria-label",label+": "+fmt(at)+" XP"+(estimated?" (approximate)":""));
+    el.setAttribute("aria-label",label+": "+fmt(at)+" XP (2023 guide)");
     const icon=document.createElement("div");icon.className="badge";icon.textContent=passed?"✓":isNext?"↗":"·";
     const name=document.createElement("b");name.textContent=label;
-    const point=document.createElement("small");point.textContent=fmt(at)+" XP"+(estimated?"*":"");
+    const point=document.createElement("small");point.textContent=fmt(at)+" XP (2023)";
     el.append(icon,name,point);
     el.addEventListener("click",()=>{
       root.querySelectorAll(".milestone").forEach(node=>node.classList.remove("selected"));
       el.classList.add("selected");
-      note(passed?label+" checkpoint passed":label+": "+fmt(at-player.xp)+" XP to checkpoint"+(estimated?" (estimate)":""));
+      note(passed?label+" checkpoint passed":label+": "+fmt(at-player.xp)+" XP to 2023 guide checkpoint (not current season verified)");
     });
     root.append(el);
   });
@@ -254,7 +252,7 @@ function displayPlayerAvatar(){
   }
   const remote=allowedArt(player.pic,true);
   safeText("avatarSource",remote?"Loading profile image from provider…":"No usable avatar received · choose your image");
-  displayPlayerAvatar();
+  displayArt("avatar","avatarFallback",player.pic);
 }
 async function saveLocalAvatar(file){
   if(!uid||!file)return;
@@ -292,8 +290,8 @@ function renderPlayer(){
   safeText("profileLevel","LEVEL "+(player.level??"—"));
   safeText("profileXP",fmt(player.xp));
   const checkpoint=RANKS.promotion(player.xp);
-  safeText("profileNext",checkpoint.complete?"COMPLETE":checkpoint.label);
-  displayArt("avatar","avatarFallback",player.pic);
+  safeText("profileNext",checkpoint.complete?"2023 GUIDE REACHED":checkpoint.label);
+  displayPlayerAvatar();
   displayArt("profileRankArt","profileRankFallback",player.rankArt);
   displayArt("levelArt","levelArtFallback",player.levelArt);
   const el=$("identityRows");el.replaceChildren();
@@ -321,7 +319,7 @@ function renderAnalytics(){
     ["BIGGEST OBSERVED DROP",minus.length?signed(Math.min(...minus)):"—"],
     ["MEAN POSITIVE CHANGE",plus.length?"+"+fmt(plus.reduce((a,b)=>a+b,0)/plus.length):"—"],
     ["HIGHEST RECORDED XP",readings.length?fmt(Math.max(...readings.map(x=>x.xp))):"—"],
-    ["TODAY'S NET",signed(todayNet())],["7-DAY NET",signed(netWithin(7*86400000))]
+    ["TODAY'S NET",signed(todayNet())],["7-DAY OBSERVED CHANGE",signed(netWithin(7*86400000))]
   ];
   items.forEach(([a,b])=>root.append(row(a,b)));
   if(currentTab==="analytics")requestAnimationFrame(drawChart);
@@ -334,10 +332,10 @@ function renderHistory(){
   const events=[];
   for(let i=1;i<readings.length;i++){
     const previous=readings[i-1],current=readings[i];
-    if(current.rank!==previous.rank||RANKS.isReset(previous,current)){
+    if(current.rank!==previous.rank){
       events.push({
         time:current.timestamp,rank:current.rank,xp:current.xp,
-        label:RANKS.isReset(previous,current)?"POSSIBLE SEASON RESET":current.xp>previous.xp?"RANK INCREASE":"RANK CHANGE"
+        label:current.xp>previous.xp?"OBSERVED RANK INCREASE":"OBSERVED RANK CHANGE"
       });
     }
   }
@@ -357,7 +355,7 @@ function renderHistory(){
       r.classList.add("rank-transition");
       const promotion=entry.xp>readings[idx-1].xp;
       const tag=document.createElement("small");tag.className="rank-transition-tag";
-      tag.textContent=RANKS.isReset(readings[idx-1],entry)?"POSSIBLE SEASON RESET":promotion?"RANK INCREASE // "+entry.rank:"RANK CHANGE // "+entry.rank;
+      tag.textContent=promotion?"OBSERVED RANK INCREASE // "+entry.rank:"OBSERVED RANK CHANGE // "+entry.rank;
       r.append(tag);
     }
     const icon=document.createElement("span");icon.className="arrow"+(delta<0?" loss":"");icon.textContent=delta===null?"•":delta<0?"↘":"↗";
@@ -569,7 +567,7 @@ document.querySelectorAll("[data-blueprint-filter]").forEach(button=>button.addE
 // Never present a time-to-kill value unless it has been independently measured
 // for the exact attachment set and version: current dataset intentionally has none.
 const META=window.RankMeta;
-let metaFilter="ALL",metaActiveId="grav";
+let metaFilter="ALL",metaActiveId="type25";
 function renderMeta(){
   if(!META)return;
   safeText("metaSeason",META.season.label);
@@ -598,7 +596,7 @@ function renderMeta(){
   safeText("metaTTK",build.ttk==null?"NOT VERIFIED":build.ttk+" ms");
   safeText("metaNotes",build.notes);
   safeText("metaSourceText",build.source+" · "+build.kind);
-  safeText("metaSourceDate","PUBLISHED "+build.published+" / REVIEWED "+META.season.reviewed);
+  safeText("metaSourceDate","SOURCE DATE "+build.published+" / CATALOG REVIEW "+META.season.reviewed);
   $("metaSourceLink").href=build.url;
   const attachments=$("metaAttachments");attachments.replaceChildren();
   build.attachments.forEach((part,index)=>{
