@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Rank Command">
-  <meta name="description" content="Fan-made COD Mobile Ranked XP companion: rank, profile, milestones, analytics and history.">
+  <meta name="description" content="COD Mobile companion with ranked progress, player profile, history and source-backed meta Gunsmith loadouts.">
   <meta name="color-scheme" content="dark">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -32,7 +32,7 @@
       <div class="connect-prelude"><span>RC // MULTIPLAYER</span><span>CONNECT A PLAYER</span></div>
       <div class="section-eyebrow">MULTIPLAYER // ACCESS TERMINAL</div>
       <h1>KNOW YOUR<br><span class="accent-word">RANK.</span></h1>
-      <div class="connect-recon">OPERATOR RECON <span>01 / 04</span></div>
+      <div class="connect-recon">OPERATOR RECON <span>01 / 05</span></div>
       <p>Connect your Call of Duty: Mobile player ID. Track your rating, identify your next promotion, and review your recorded progress.</p>
       <form id="connectForm">
         <label for="uidInput">COD MOBILE PLAYER UID</label>
@@ -140,11 +140,40 @@
           <p class="small">Clearing readings affects only this browser, never your game account. Export a backup first if you want to keep your history.</p>
         </section>
       </section>
+      <section class="pane" id="pane-meta">
+        <div class="screen-intro"><div class="overline">GUNSMITH // SOURCE INTELLIGENCE</div><h1>META <span>LOADOUTS</span></h1><p>CURATED MP BUILDS / NOT LIVE GAME TELEMETRY</p></div>
+        <div class="meta-season"><span>ACTIVE GAME SEASON</span><strong id="metaSeason">SEASON 9</strong><small>BUILDS REVIEWED 19 OCT 2026</small>
+          <a id="metaOfficial" href="https://www.callofduty.com/blog/2026/10/call-of-duty-mobile-season-9-vampires-werewolves" target="_blank" rel="noopener noreferrer">OFFICIAL SEASON NOTES ↗</a>
+        </div>
+        <div class="meta-explainer">
+          <strong>TTK POLICY // NO INVENTED NUMBERS</strong>
+          <p>Time to kill requires measured damage, shot interval, range, hit zone and attachment effects for the same patch. None of these exact builds has an independently confirmed TTK here, so each shows <b>NOT VERIFIED</b>.</p>
+        </div>
+        <section class="meta-browser" aria-label="COD Mobile gunsmith builds">
+          <div class="section-label"><b>01 / WEAPON INTELLIGENCE</b><small>SELECT A PUBLISHED BUILD</small></div>
+          <div class="meta-filters" role="group" aria-label="Weapon category">
+            <button type="button" data-meta-filter="ALL" class="selected" aria-pressed="true">ALL</button>
+            <button type="button" data-meta-filter="AR" aria-pressed="false">ASSAULT</button>
+            <button type="button" data-meta-filter="SMG" aria-pressed="false">SMG</button>
+          </div>
+          <div id="metaWeapons" class="meta-weapons" aria-label="Source-backed loadouts"></div>
+        </section>
+        <section class="meta-detail" id="metaDetail" aria-live="polite">
+          <div class="meta-detail-head"><div><small id="metaWeaponClass">AR // MID RANGE</small><h2 id="metaWeaponName">SELECT WEAPON</h2><span id="metaWeaponRole">—</span></div><div class="meta-ttk"><small>THEORETICAL TTK</small><strong id="metaTTK">NOT VERIFIED</strong></div></div>
+          <div class="meta-attachment-title">GUNSMITH // FIVE ATTACHMENT SLOTS</div>
+          <div id="metaAttachments" class="meta-attachments"></div>
+          <p id="metaNotes" class="meta-notes"></p>
+          <div class="meta-source"><div><small>SOURCE / BUILD STATUS</small><strong id="metaSourceText">—</strong><span id="metaSourceDate">—</span></div><a id="metaSourceLink" href="#" target="_blank" rel="noopener noreferrer">OPEN SOURCE ↗</a></div>
+          <button class="primary full meta-copy" id="metaCopy" type="button">⎘ COPY THIS GUNSMITH BUILD <span>↗</span></button>
+        </section>
+        <p class="small meta-footnote">These are attributed community and published-guide recommendations, not officially endorsed or confirmed top-ranking weapons. The October season announcement is official; attachment recommendations and meta strength are third-party opinions.</p>
+      </section>
       <nav class="tabs" aria-label="Dashboard sections">
         <button data-tab="command" class="active" aria-current="page" aria-label="Multiplayer HQ"><span>⌖</span>HQ</button>
         <button data-tab="player" aria-label="Operator File"><span>▣</span>OPERATOR</button>
         <button data-tab="analytics" aria-label="Rank Intel"><span>▥</span>INTEL</button>
         <button data-tab="history" aria-label="Sync Log"><span>≡</span>LOG</button>
+        <button data-tab="meta" aria-label="Meta Loadouts"><span>⌁</span>META</button>
       </nav>
     </section>
     <div id="notice" role="status" aria-live="polite" hidden></div>
@@ -152,6 +181,7 @@
   
 </div>
 <script defer src="/progression.js"></script>
+<script defer src="/meta.js"></script>
 <script defer src="/app.js"></script>
 </body>
 </html>
