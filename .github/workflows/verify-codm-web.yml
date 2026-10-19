@@ -17,30 +17,24 @@ jobs:
       - name: Check all JavaScript syntax
         run: |
           node --check codm-pwa/app.js
-          node --check codm-pwa/rank-art.js
           node --check codm-pwa/sw.js
           node --check codm-pwa/api/player.js
-      - name: Render and validate every rank
+      - name: Verify authentic original rank art flow
         run: |
           node <<'NODE'
-          const fs=require('fs'), vm=require('vm');
-          const code=fs.readFileSync('codm-pwa/rank-art.js','utf8');
-          const sandbox={window:{}};
-          vm.runInNewContext(code,sandbox);
-          const art=sandbox.window.RankArt;
-          const expected=['Rookie','Veteran','Elite','Pro','Master','Grand Master','Legendary'];
-          if(art.tiers.length!==7)throw Error('Missing ranks');
-          for(const rank of expected){
-            const resolved=art.resolve(rank+' I');
-            if(!resolved||resolved.label!==rank)throw Error('Bad mapping '+rank);
-            const svg=art.render(rank==='Legendary'?rank:rank+' IV');
-            if(!svg.includes('<svg')||!svg.includes('</svg>')||!svg.includes('var(--badge-edge)'))throw Error('No valid vector for '+rank);
-            if(svg.includes('url(#outer)')||svg.includes('url(#inner)')||svg.includes('url(#gem)'))throw Error('Unscoped gradient for '+rank);
-            if(rank!=='Legendary'&&!svg.includes('>IV</text>'))throw Error('Incorrect subdivision art '+rank);
-          }
-          if(!art.render('unrecognized').includes('Unranked'))throw Error('Unknown rank incorrectly represented');
+          const fs=require('fs');
           const html=fs.readFileSync('codm-pwa/index.html','utf8');
-          if(!html.includes('/rank-art.js')||!html.includes('id="rankGallery"')||!html.includes('id="rankVector"'))throw Error('Rank UI missing');
-          if(html.includes('id="rankArt"'))throw Error('Low-res rank image is still in hero');
-          console.log('Seven HD vector ranks, subtiers, unknown fallback and HTML integration verified');
+          const js=fs.readFileSync('codm-pwa/app.js','utf8');
+          const sw=fs.readFileSync('codm-pwa/sw.js','utf8');
+          for(const term of ['id="rankArt"','id="badgeUnavailable"','id="interactiveRank"']){
+            if(!html.includes(term))throw Error('Missing original rank art UI: '+term);
+          }
+          for(const forbidden of ['id="rankGallery"','id="rankVector"','/rank-art.js']){
+            if(html.includes(forbidden)||sw.includes(forbidden))throw Error('Custom rank art still active: '+forbidden);
+          }
+          if(!js.includes('displayArt("rankArt","badgeUnavailable",player.rankArt)'))throw Error('Live source image no longer used');
+          if(!js.includes('Math.min(1,maxWidth/width,maxHeight/height)'))throw Error('Original image might be enlarged above native size');
+          if(!js.includes('function allowedArt(raw)'))throw Error('Original image URL validation missing');
+          if(fs.existsSync('codm-pwa/rank-art.js'))throw Error('Fake rank insignias not deleted');
+          console.log('Only authentic per-user rank images; no invented badges; native resolution limit verified.');
           NODE
