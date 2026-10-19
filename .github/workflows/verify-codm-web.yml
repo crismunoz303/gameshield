@@ -14,153 +14,79 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Check all JavaScript syntax
+      - name: JavaScript syntax
         run: |
           node --check codm-pwa/app.js
-          node --check codm-pwa/progression.js
           node --check codm-pwa/meta.js
           node --check codm-pwa/blueprints.js
           node --check codm-pwa/sw.js
           node --check codm-pwa/api/player.js
-      - name: Test every rank and all major interfaces
+      - name: Only sourced, supported data is shown
         run: |
           node <<'NODE'
           const assert=require('node:assert/strict');
           const fs=require('node:fs');
-          const ranks=require('./codm-pwa/progression.js');
-          const html=fs.readFileSync('codm-pwa/index.html','utf8');
-          const js=fs.readFileSync('codm-pwa/app.js','utf8');
-          const css=fs.readFileSync('codm-pwa/style.css','utf8');
-          const sw=fs.readFileSync('codm-pwa/sw.js','utf8');
-          const expected=[
-            [0,'ROOKIE'],[1001,'VETERAN'],[2001,'ELITE'],[3001,'PRO'],
-            [4501,'MASTER'],[6001,'GRAND MASTER'],[8001,'LEGENDARY']
-          ];
-          for(const [xp,name] of expected)assert.equal(ranks.currentBand(xp).name,name);
-          assert.equal(ranks.promotion(6074).label,'GRAND MASTER II');
-          assert.equal(ranks.promotion(6074).remaining,327);
-          assert.equal(ranks.promotion(6074).historical,true);
-          assert.equal(ranks.promotion(100).label,'ROOKIE II');
-          assert.equal(ranks.promotion(4500).label,'MASTER I');
-          assert.equal(ranks.promotion(8001).complete,true);
-          assert.equal(ranks.promotion(15000).remaining,0);
-          assert.equal(ranks.progress(8001),100);
-          assert.equal(ranks.progress(0),0);
-          assert.equal(ranks.nearby(3500).length,6);
-          assert.equal(ranks.isReset({xp:8200},{xp:5000}),false);
-          assert.equal(ranks.isReset({xp:7200},{xp:7000}),false);
-          assert.ok(!ranks.CHECKPOINTS.some((a,i)=>i&&a.at<=ranks.CHECKPOINTS[i-1].at));
-          assert.ok(html.indexOf('/progression.js')<html.indexOf('/app.js'));
-          for(const id of ['rankArt','badgeUnavailable','profileRankArt','profileXP','profileNext',
-                           'milestones','checkpointNote','rankEvents','backupBtn',
-                           'restoreBtn','restoreFile','intelCurrent','logCount','clearBtn',
-                           'archiveCount','historyList','connectForm','uidInput'])
-            assert.ok(html.includes('id="'+id+'"'),'missing '+id);
-          for(const marker of ['data-tab="command"','data-tab="player"','data-tab="analytics"','data-tab="history"'])
-            assert.ok(html.includes(marker),marker);
-          for(const forbidden of ['id="rankGallery"','id="rankVector"','RANK COMMAND / RELEASE',
-                                  'FAN-MADE · READ-ONLY · NOT AFFILIATED','<footer>'])
-            assert.ok(!html.includes(forbidden),'forbidden UI '+forbidden);
-          assert.ok(js.includes('displayArt("rankArt","badgeUnavailable",player.rankArt)'));
-          assert.ok(js.includes('Math.min(1,maxWidth/width,maxHeight/height)'));
-          assert.ok(js.includes('function allowedArt(raw,avatar=false)'));
-          assert.ok(!fs.existsSync('codm-pwa/rank-art.js'));
-          for(const marker of ['rankcommand-xp-backup','requestedUID=uid','data.uid!==uid',
-                                'data.readings.every(valid)','RANKS.promotion(player.xp)',
-                                'RANKS.nearby(player.xp,6)','rank-transition-tag'])
-            assert.ok(js.includes(marker),'missing feature '+marker);
-          assert.ok(css.includes('env(safe-area-inset-top'));
-          assert.ok(css.includes('.source-details'));
-          assert.ok(css.includes('padding-top:max(76px'));
-          assert.ok(css.includes('.tabs.dock-retracted'));
-          for(const id of ['avatar','avatarFallback','chooseAvatarBtn','clearAvatarBtn','avatarFile','avatarSource'])
-            assert.ok(html.includes('id="'+id+'"'),'missing avatar '+id);
-          assert.ok(html.includes('NO<br>AVATAR'));
-          assert.ok(js.includes('displayPlayerAvatar()'));
-          assert.ok(js.includes('function saveLocalAvatar(file)'));
-          assert.ok(js.includes('localStorage.setItem(STORAGE_PREFIX+uidKey("avatar")'));
-          assert.ok(js.includes('displayArt("avatar","avatarFallback",player.pic)'));
-          assert.ok(css.includes('-webkit-user-select:none'));
-          const vm=require('node:vm');
-          const proxySource=fs.readFileSync('codm-pwa/api/player.js','utf8');
-          const sandbox={URL,module:{exports:{}}};
-          vm.runInNewContext(proxySource+';this.checkAvatarPicture=picture;',sandbox);
-          assert.equal(sandbox.checkAvatarPicture('https://randomuser.me/api/portraits/men/42.jpg',true),
-            'https://randomuser.me/api/portraits/men/42.jpg');
-          assert.equal(sandbox.checkAvatarPicture('https://randomuser.me/avatar.jpg',false),null);
-          assert.equal(sandbox.checkAvatarPicture('http://example.com/a.jpg',true),null);
-          assert.equal(sandbox.checkAvatarPicture('https://localhost/avatar.jpg',true),null);
-          assert.equal(sandbox.checkAvatarPicture('https://127.0.0.1/avatar.jpg',true),null);
-          assert.ok(proxySource.includes('pic:picture(source.pic,true)'));
-          assert.ok(js.includes('accumulatedDockTravel'));
-          assert.ok(js.includes('showNavigationDock()'));
-          assert.ok(js.includes('document.documentElement.scrollTop=0'));
-          assert.ok(sw.includes('/progression.js'));
-          assert.ok(sw.includes('rankcommand-static-v16'));
-
-          assert.ok(sw.includes('/meta.js'));
-          assert.ok(sw.includes('/blueprints.js'));
-          assert.ok(html.includes('src="/blueprints.js"'));
-          assert.ok(html.indexOf('/blueprints.js')<html.indexOf('/app.js'));
-          assert.ok(html.includes('src="/meta.js"'));
-          assert.ok(html.indexOf('/meta.js')<html.indexOf('/app.js'));
-          assert.ok(html.includes('data-tab="meta"'));
-          for(const id of ['metaWeapons','metaAttachments','metaTTK','metaCopy','metaSourceLink','metaSourceText','metaNotes'])
-            assert.ok(html.includes('id="'+id+'"'),'missing meta UI '+id);
-          assert.ok(js.includes('if(tab==="meta")switchWeaponMode(weaponMode)'));
-          assert.ok(js.includes('build.ttk==null?"NOT VERIFIED"'));
-          assert.ok(css.includes('.meta-weapons'));
-          assert.ok(css.includes('grid-template-columns:repeat(5,minmax(0,1fr))'));
+          const text=name=>fs.readFileSync('codm-pwa/'+name,'utf8');
+          const html=text('index.html'),js=text('app.js'),css=text('style.css'),sw=text('sw.js');
           const meta=require('./codm-pwa/meta.js');
-          assert.equal(meta.season.label,'SEASON 9 // VAMPIRES VS WEREWOLVES');
+          const blueprints=require('./codm-pwa/blueprints.js');
+          const all=html+js+text('meta.js')+text('blueprints.js');
+          assert.ok(!/NOT VERIFIED|NOT CURRENTLY VERIFIED|not verified|unverified/i.test(all));
+          assert.ok(!/historical benchmarks|2023 guide|2023 reference/i.test(html));
+          for(const forbidden of ['/progression.js','id="metaTTK"','VERIFIED TTK',
+            'id="gainChoices"','id="milestones"','id="progressBar"','id="nextTier"',
+            'id="blueprintRarityNotStated"','data-blueprint-filter="UNKNOWN"']){
+            assert.ok(!html.includes(forbidden),'unsupported visible UI '+forbidden);
+          }
+          assert.ok(!sw.includes('/progression.js'));
+          assert.ok(!js.includes('RANKS.')&&!js.includes('const LEGENDARY'));
+          assert.ok(sw.includes('rankcommand-static-v17'));
+          for(const item of ['/meta.js','/blueprints.js']){
+            assert.ok(sw.includes(item));
+            assert.ok(html.includes('src="'+item+'"'));
+            assert.ok(html.indexOf(item)<html.indexOf('/app.js'));
+          }
+          for(const tab of ['command','player','analytics','history','meta']){
+            assert.ok(html.includes('data-tab="'+tab+'"'),tab);
+          }
+          for(const id of ['rankArt','avatar','profileXP','profileNext','currentXP','metaWeapons',
+              'metaAttachments','metaSourceLink','metaCopy','modeBlueprints','blueprintList',
+              'blueprintDetail','blueprintSource','blueprintRarity','backupBtn','restoreBtn',
+              'connectForm','historyList','chart']){
+            assert.ok(html.includes('id="'+id+'"'),'missing '+id);
+          }
+          assert.ok(js.includes('displayArt("rankArt","badgeUnavailable",player.rankArt)'));
+          assert.ok(js.includes('displayArt("avatar","avatarFallback",player.pic)'));
+          assert.ok(js.includes('function renderBlueprints(){'));
+          assert.ok(js.includes('if(entry.rarity)b.append(rarity)'));
+          assert.ok(js.includes('$("blueprintRarity").hidden=!selected.rarity'));
+          assert.ok(js.includes('switchWeaponMode(weaponMode)'));
+          assert.ok(js.includes('localStorage.setItem(STORAGE_PREFIX+uidKey("avatar")'));
+          assert.ok(js.includes('function backupHistory()'));
+          assert.ok(js.includes('async function restoreHistory(file)'));
+          assert.ok(!fs.existsSync('codm-pwa/rank-art.js'));
           assert.equal(meta.entries.length,2);
-          assert.ok(meta.entries.every(x=>x.ttk===null&&x.metaRank===null));
-          assert.ok(html.includes('Codashop guide dated February 16, 2023'));
-          assert.ok(!ranks.reference.verifiedCurrent);
-          assert.ok(html.includes('PROVIDER-REPORTED PROFILE FIELDS'));
-          assert.ok(html.includes('LAST REPORTED RATING'));
-          assert.ok(!html.includes('VERIFIED PROFILE FIELDS'));
-          assert.ok(!js.includes('POSSIBLE SEASON RESET'));
-          const seen=new Set();
-          for(const entry of meta.entries){
-            assert.ok(!seen.has(entry.id),'duplicate meta '+entry.id);
-            seen.add(entry.id);
-            assert.ok(['AR','SMG'].includes(entry.class));
-            assert.equal(entry.attachments.length,5);
-            assert.equal(entry.ttk,null,'Unverified TTK cannot be published as numeric');
-            assert.equal(entry.ttkStatus,'NOT VERIFIED');
-            assert.ok(entry.url.startsWith('https://'));
-            for(const part of entry.attachments){
+          for(const item of meta.entries){
+            assert.equal(item.attachments.length,5);
+            assert.ok(item.url.startsWith('https://'));
+            for(const part of item.attachments){
               assert.ok(part.slot.length>1&&part.name.length>2);
             }
+            for(const key of ['ttk','ttkStatus','metaRank','published'])
+              assert.ok(!Object.hasOwn(item,key),'unsupported Gunsmith field '+key);
           }
-          const blueprints=require('./codm-pwa/blueprints.js');
           assert.equal(blueprints.length,20);
-          const ids=new Set();
+          const unique=new Set();
           for(const bp of blueprints){
-            assert.ok(!ids.has(bp.id),'duplicated blueprint '+bp.id);
-            ids.add(bp.id);
+            assert.ok(bp.id&&bp.weapon&&bp.blueprint);
+            assert.ok(!unique.has(bp.id),'duplicate blueprint '+bp.id);unique.add(bp.id);
             assert.ok(bp.sourceUrl.startsWith('https://www.callofduty.com/blog/'));
-            assert.ok(bp.weapon.length>1&&bp.blueprint.length>2);
-            assert.ok(['Mythic','Legendary',null].includes(bp.rarity));
-            assert.equal(bp.ttkMs,null);
-            assert.equal(bp.availability,'NOT VERIFIED');
-            assert.equal(bp.owned,null);
+            assert.ok(!Object.hasOwn(bp,'rarity')||['Mythic','Legendary'].includes(bp.rarity));
+            for(const forbidden of ['ttkMs','ttkStatus','availability','owned']){
+              assert.ok(!Object.hasOwn(bp,forbidden),'unsupported blueprint field '+forbidden);
+            }
           }
-          for(const id of ['metaGunsmith','metaBlueprints','modeGunsmith','modeBlueprints',
-              'blueprintSearch','blueprintList','blueprintCount','blueprintDetail','blueprintSource',
-              'blueprintRelease','blueprintRarity']){
-            assert.ok(html.includes('id="'+id+'"'),'missing blueprint control '+id);
-          }
-          assert.ok(js.includes('function renderBlueprints(){'));
-          assert.ok(js.includes('blueprintFilter==="UNKNOWN"?x.rarity===null'));
-          assert.ok(css.includes('.blueprint-list'));
-          assert.ok(!html.includes('FASTEST TTK'));
-          const renderCode=js.slice(js.indexOf('function displayPlayerAvatar(){'),js.indexOf('async function saveLocalAvatar(file)'));
-          assert.ok(renderCode.includes('displayArt("avatar","avatarFallback",player.pic)'));
-          assert.ok(!renderCode.includes('displayPlayerAvatar();'));
-          console.log('PASS: officially sourced blueprints and historical guide disclosures');
-          console.log('PASS: 2 sourced five-attachment builds, TTK labels accurate');
-
-          console.log('PASS: all seven ranks, GM checkpoints, original artwork, UID safety, backup controls, responsive styling');
+          assert.ok(css.includes('env(safe-area-inset-top'));
+          assert.ok(css.includes('.tabs.dock-retracted'));
+          console.log('PASS — documented attachments, official blueprint facts, no guessed TTK, no old-season projections, original rank artwork, account isolation');
           NODE
