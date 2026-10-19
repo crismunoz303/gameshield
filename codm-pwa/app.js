@@ -404,6 +404,30 @@ rankButton.addEventListener("click",()=>{
   safeText("chargeHint",charged?"✦ GLOW CHARGED · TAP TO DIM":"✧ TAP EMBLEM TO CHARGE");
 });
 
+const navigationDock=document.querySelector(".tabs");
+let previousDockY=window.scrollY||0;
+let dockPending=false;
+function showNavigationDock(){
+  navigationDock.classList.remove("dock-retracted");
+  navigationDock.inert=false;
+}
+window.addEventListener("scroll",()=>{
+  if(dockPending)return;
+  dockPending=true;
+  requestAnimationFrame(()=>{
+    dockPending=false;
+    const y=Math.max(0,window.scrollY||document.documentElement.scrollTop||0);
+    const delta=y-previousDockY;
+    if(y<110||delta< -9){
+      showNavigationDock();
+    }else if(y>180&&delta>9){
+      navigationDock.classList.add("dock-retracted");
+      navigationDock.inert=true;
+    }
+    previousDockY=y;
+  });
+},{passive:true});
+
 document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
 document.querySelectorAll("[data-range]").forEach(b=>b.addEventListener("click",()=>{
   range=b.dataset.range;document.querySelectorAll("[data-range]").forEach(x=>x.classList.toggle("selected",x===b));drawChart()
