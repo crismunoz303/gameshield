@@ -532,6 +532,185 @@ private struct Dashboard: View {
     }
 
 
+
+    private func identityPanel(_ player: Player) -> some View {
+        VStack(alignment: .leading, spacing: 15) {
+            sectionTitle("PLAYER IDENTITY", subtitle: "Every available field from the CODM UID lookup")
+            HStack(alignment: .center, spacing: 15) {
+                PlayerArtwork(urlText: player.avatarURL, fallback: "person.crop.square.fill", size: 86)
+                VStack(alignment: .leading, spacing: 7) {
+                    Text(player.nickname).font(.system(size: 24, weight: .black, design: .rounded))
+                        .foregroundStyle(.white).lineLimit(2)
+                    Label(player.rank.uppercased(), systemImage: "shield.fill")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Theme.yellow)
+                    Text("LEVEL \(player.level.map(String.init) ?? "—")")
+                        .font(.system(size: 12, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(Theme.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .background(Theme.ink, in: RoundedRectangle(cornerRadius: 15))
+
+            HStack(spacing: 12) {
+                RankMedal(image: player.rankImageURL, rank: player.rank)
+                    .frame(width: 120, height: 122)
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("MULTIPLAYER RANK").font(.system(size: 10, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(Theme.secondary)
+                    Text(player.rank)
+                        .font(.system(size: 19, weight: .black, design: .rounded))
+                        .foregroundStyle(Theme.yellow)
+                    Text("\(player.xp.formatted()) RANK XP")
+                        .font(.system(size: 12, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(.white)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .background(Theme.ink, in: RoundedRectangle(cornerRadius: 15))
+
+            sectionTitle("ACCOUNT FIELDS", subtitle: "Direct values, not estimates")
+            infoLine("PLAYER UID", uid, symbol: "number")
+            infoLine("SHORT PLAYER ID", player.shortId ?? "Not provided", symbol: "number.square")
+            infoLine("COUNTRY CODE", player.countryCode ?? "Not provided", symbol: "globe.americas")
+            infoLine("COUNTRY", player.countryCode.flatMap { Locale.current.localizedString(forRegionCode: $0) } ?? "Not provided", symbol: "flag")
+            infoLine("COUNTRY ID", player.countryId.map(String.init) ?? "Not provided", symbol: "globe")
+            infoLine("INTERNAL MP RANK CLASS", player.rankClass.map(String.init) ?? "Not provided", symbol: "shield.lefthalf.filled")
+            infoLine("PLAYER LEVEL", player.level.map(String.init) ?? "Not provided", symbol: "star.circle")
+            infoLine("RANK RATING", player.xp.formatted(), symbol: "bolt.fill")
+            HStack(spacing: 12) {
+                PlayerArtwork(urlText: player.levelImageURL, fallback: "star.circle.fill", size: 55)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("LEVEL ICON").font(.system(size: 10, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(Theme.secondary)
+                    Text(player.levelImageURL == nil ? "Not returned by API" : "Provided by the player-data API")
+                        .font(.system(size: 12)).foregroundStyle(.white)
+                }
+                Spacer()
+            }.padding(12).background(Theme.ink, in: RoundedRectangle(cornerRadius: 12))
+            ShareLink(item: uid) {
+                Label("SHARE / COPY MY PLAYER UID", systemImage: "square.on.square")
+                    .font(.system(size: 12, weight: .heavy, design: .monospaced))
+                    .frame(maxWidth: .infinity)
+                    .padding(13)
+                    .foregroundStyle(Theme.ink)
+                    .background(Theme.yellow, in: RoundedRectangle(cornerRadius: 12))
+            }
+        }.card()
+    }
+
+    private func infoLine(_ label: String, _ value: String, symbol: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Theme.yellow)
+                .frame(width: 28)
+            Text(label)
+                .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                .foregroundStyle(Theme.secondary)
+            Spacer(minLength: 2)
+            Text(value)
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.trailing)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+        }
+        .padding(.vertical, 7)
+    }
+
+    private func providerPanel(_ player: Player) -> some View {
+        VStack(alignment: .leading, spacing: 13) {
+            sectionTitle("DATA SOURCE & COVERAGE", subtitle: "Exactly what your connection can and cannot access")
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: "network")
+                    .font(.system(size: 23))
+                    .foregroundStyle(Theme.yellow)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("UNOFFICIAL READ-ONLY LOOKUP").font(.system(size: 11, weight: .black, design: .monospaced))
+                    Text("callofdutymobile.vercel.app").font(.system(size: 11))
+                        .foregroundStyle(Theme.secondary)
+                }
+                Spacer()
+            }.padding(10).background(Theme.ink, in: RoundedRectangle(cornerRadius: 13))
+            coverage("LIVE PROFILE", "Nickname, player level, avatar link, country, IDs, MP rank, rank icon, rating", true)
+            coverage("ON-DEVICE ANALYTICS", "Rank-change history, XP trends, daily/weekly changes, records and projections", true)
+            coverage("NOT PROVIDED", "K/D, kills, deaths, matches, wins, losses, BR rank, weapons, inventory, leaderboard placement", false)
+            coverage("DAILY GIFT CLAIM", "A separate state-changing endpoint exists; this tracker never calls it", false)
+            Label("Last successful lookup: \(player.checkedAt.formatted(date: .abbreviated, time: .shortened))",
+                  systemImage: "clock")
+                .font(.system(size: 11)).foregroundStyle(Theme.secondary)
+            Text("Data can become stale if the unofficial provider stops responding. No game passwords, protected game APIs or game traffic interception are used.")
+                .font(.system(size: 10)).foregroundStyle(Theme.secondary)
+        }.card()
+    }
+
+    private func coverage(_ name: String, _ description: String, _ available: Bool) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: available ? "checkmark.seal.fill" : "minus.circle")
+                .font(.system(size: 17))
+                .foregroundStyle(available ? Theme.green : Theme.orange)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(name).font(.system(size: 11, weight: .black, design: .monospaced))
+                Text(description).font(.system(size: 11)).foregroundStyle(Theme.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 2)
+        }
+        .padding(11)
+        .background(Theme.ink, in: RoundedRectangle(cornerRadius: 11))
+    }
+
+    private var historySummary: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            sectionTitle("ALL-TIME RECORDS", subtitle: "Calculated from the readings saved on this iPhone")
+            infoLine("TOTAL CHANGED READINGS", store.changes.count.formatted(), symbol: "list.bullet.rectangle")
+            infoLine("FIRST READING", store.firstDate.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "—", symbol: "calendar")
+            infoLine("NET XP SINCE FIRST READING", signed(store.netRecorded), symbol: "arrow.up.right")
+            infoLine("BIGGEST RECORDED GAIN", signed(store.bestIncrease), symbol: "arrow.up.circle")
+            infoLine("BIGGEST RECORDED DROP", signed(store.largestDrop), symbol: "arrow.down.circle")
+            infoLine("MEAN POSITIVE CHANGE", signed(store.positiveAverage), symbol: "chart.bar")
+            Text("These are differences between syncs, not automatically detected completed matches.")
+                .font(.system(size: 10)).foregroundStyle(Theme.secondary)
+        }.card()
+    }
+
+    private var historyArchive: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            sectionTitle("YOUR COMPLETE XP RECORD", subtitle: "Local history retained across updates")
+            HStack(spacing: 11) {
+                Image(systemName: "externaldrive.fill")
+                    .font(.system(size: 25))
+                    .foregroundStyle(Theme.yellow)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(store.points.count.formatted()) STORED READINGS")
+                        .font(.system(size: 16, weight: .black, design: .rounded))
+                    Text("Baseline plus every change, capped at 1,000 readings")
+                        .font(.system(size: 11)).foregroundStyle(Theme.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            if store.points.isEmpty {
+                Text("Sync your rank to save your first reading.")
+                    .foregroundStyle(Theme.secondary).font(.subheadline)
+            } else {
+                ShareLink(item: store.historyCSV,
+                          subject: Text("CODM rank XP history"),
+                          message: Text("CSV text from CODM Rank Tracker — changes are between readings.")) {
+                    Label("SHARE FULL HISTORY AS CSV TEXT", systemImage: "square.and.arrow.up")
+                        .font(.system(size: 12, weight: .black, design: .monospaced))
+                        .frame(maxWidth: .infinity).padding(13)
+                        .foregroundStyle(Theme.ink)
+                        .background(Theme.yellow, in: RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            Text("The sharing sheet sends CSV text, not a pre-created .csv file. It includes timestamps, XP, rank, and XP deltas, but no account credentials.")
+                .font(.system(size: 10)).foregroundStyle(Theme.secondary)
+        }.card()
+    }
+
     private var overview: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionTitle("PERFORMANCE SNAPSHOT", subtitle: "Based on recorded rank checks")
@@ -976,5 +1155,47 @@ private struct RankMedal: View {
                 .foregroundStyle(.white)
                 .shadow(color: Theme.ink.opacity(0.7), radius: 4)
         }
+    }
+}
+
+
+private struct PlayerArtwork: View {
+    let urlText: String?
+    let fallback: String
+    let size: CGFloat
+
+    // Only load image assets from the same known artwork CDN used by the rank service.
+    private var safeURL: URL? {
+        guard let raw = urlText, let url = URL(string: raw), url.scheme == "https",
+              let host = url.host?.lowercased(),
+              host == "codashop.com" || host.hasSuffix(".codashop.com") else { return nil }
+        return url
+    }
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 14)
+                .fill(LinearGradient(colors: [Theme.yellow.opacity(0.28), Theme.elevated],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+            if let url = safeURL {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().scaledToFit()
+                    } else { fallbackIcon }
+                }
+                .padding(6)
+            } else {
+                fallbackIcon
+            }
+        }
+        .frame(width: size, height: size)
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.yellow.opacity(0.38)))
+        .accessibilityLabel("Player artwork")
+    }
+
+    private var fallbackIcon: some View {
+        Image(systemName: fallback)
+            .font(.system(size: size * 0.48, weight: .light))
+            .foregroundStyle(Theme.yellow)
     }
 }
