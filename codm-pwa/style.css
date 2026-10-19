@@ -604,3 +604,225 @@ body:after{
 @media(min-width:640px){
  .meta-detail-head,.blueprint-detail-row{grid-template-columns:minmax(0,1fr)}
 }
+
+
+/* RELEASE 09 — BROWSE-FIRST APP: familiar COD companion IA, original Rank Command styling.
+   No copied CODMunity graphics, weapon screenshots, ratings, or synthetic imagery. */
+:root{
+ --bg:#0c0f12;--surface:#171c20;--surface2:#1b2328;--surface3:#263037;
+ --red:#e43d58;--red-hot:#ff5c75;--red-dark:#8e1c30;
+ --white:#f5f7f7;--muted:#a9b4b7;--line:#4e5b62;--line-soft:#28333a;
+ --font-ui:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ --font-display:"Oxanium",system-ui,sans-serif;
+ --font-mono:"IBM Plex Mono",monospace;
+}
+html,body{background:#0c0f12}
+body:before{opacity:.08}
+#app{
+ max-width:900px;
+ padding:calc(18px + env(safe-area-inset-top)) 16px calc(115px + env(safe-area-inset-bottom));
+}
+.topbar{
+ grid-template-columns:36px minmax(0,1fr) 38px;
+ gap:10px;align-items:center;padding:2px 0 13px;border-bottom:0
+}
+.topbar:after{display:none}
+.brandmark{
+ height:36px;width:36px;background:#e6425a;border-radius:10px;
+ clip-path:none
+}
+.brandmark span{font:800 19px/.95 var(--font-display);color:#fff}
+.brand small{font:700 8px var(--font-mono);color:#818f97;letter-spacing:.04em}
+.brand strong{font:800 clamp(20px,6vw,28px)/1 var(--font-display);letter-spacing:-.04em}
+.iconbtn{border-radius:10px;clip-path:none;height:36px;width:36px;font-size:20px;border:1px solid #43515a;background:#1e262d}
+.networkstate{
+ margin:0 0 24px;padding:8px 0 15px;border-color:#27323a;
+ font:500 10px/1.35 var(--font-ui);color:#9aa9ae
+}
+.network-label{font:800 9px var(--font-mono)}
+.beacon{transform:none;border-radius:50%;width:7px;height:7px}
+main{min-height:50vh}
+.screen-intro{padding:0;margin:0 0 20px;border-bottom:0}
+.screen-intro:before{display:none}
+.screen-intro .overline{font:800 9px var(--font-mono);color:#ed6880;margin:0 0 9px}
+.screen-intro h1{font:800 clamp(30px,8vw,48px)/1.08 var(--font-ui);letter-spacing:-.05em}
+.screen-intro h1 span{color:var(--white)}
+.screen-intro p{font:500 12px/1.5 var(--font-ui);letter-spacing:0;color:#9eafb7;margin:9px 0 0}
+.section-label{margin:0 0 12px;border-bottom:0;padding-bottom:0;align-items:center}
+.section-label b{font:800 15px/1.2 var(--font-ui);letter-spacing:-.01em}
+.section-label small{font:600 9px var(--font-ui);color:#9babb1;max-width:55%}
+.small{font:500 12px/1.55 var(--font-ui);color:#a0adb2}
+.primary,.secondary,.danger{
+ clip-path:none;border-radius:12px;min-height:45px;
+ font:800 12px/1.2 var(--font-ui);letter-spacing:0;
+ padding:12px 15px
+}
+.primary{border:0;background:#d63852;color:#fff;box-shadow:none}
+.secondary{border:1px solid #46545c;background:#212a30}
+#notice{border-left:0;border-radius:12px;box-shadow:0 12px 44px #000a}
+.tabs{
+ bottom:calc(8px + env(safe-area-inset-bottom));
+ width:min(calc(100% - 24px),720px);
+ grid-template-columns:repeat(5,minmax(0,1fr));
+ padding:5px 4px;clip-path:none;
+ border:1px solid #46525b99;border-radius:18px;
+ background:#182126f5;box-shadow:0 5px 28px #000b
+}
+.tabs button{
+ min-height:57px;padding:6px 1px;border:0;border-radius:12px;
+ font:700 clamp(8px,2.15vw,10px)/1.2 var(--font-ui);letter-spacing:0;
+ gap:4px;color:#a7b6bf
+}
+.tabs button span{font:750 21px/1 var(--font-display)}
+.tabs button.active{background:#5b2635;color:#fff}
+.tabs button.active:before{height:2px;left:20%;right:20%;top:2px;background:#f4697a;border-radius:2px}
+.tabs.dock-retracted{transform:translate(-50%,calc(100% + 40px))}
+/* Home: quick feature launcher, editorial source-first shelves */
+.hub-section-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:23px 0 12px}
+.hub-section-title strong{font:800 17px/1.2 var(--font-ui);letter-spacing:-.025em}
+.hub-section-title>span{color:#82969e;font:700 9px var(--font-mono)}
+.hub-section-title>button{
+ border:0;background:none;padding:5px 0;color:#ff8295;font:750 12px var(--font-ui)
+}
+.hub-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.hub-link{
+ display:flex;flex-direction:column;align-items:start;gap:6px;
+ min-height:130px;padding:13px 9px 10px;position:relative;
+ background:linear-gradient(160deg,#252e34,#182027 90%);border:1px solid #3d4c56;
+ border-radius:14px;color:#fff;text-align:left;min-width:0
+}
+.hub-link-icon{display:grid;place-items:center;width:35px;height:35px;background:#5b2937;color:#ffa0ac;border-radius:10px;font:750 21px var(--font-display)}
+.hub-link strong{font:800 clamp(10px,2.7vw,14px) var(--font-ui);letter-spacing:-.03em}
+.hub-link small{font:500 9px/1.35 var(--font-ui);color:#a9b8bf;overflow-wrap:anywhere}
+.hub-link i{position:absolute;top:11px;right:10px;color:#ef6f86;font-style:normal}
+.hub-preview-list{display:flex;flex-direction:column;gap:8px}
+.home-preview{display:flex;align-items:center;gap:11px;text-align:left;
+ width:100%;min-height:66px;border:1px solid #3b4850;border-radius:13px;
+ background:#1a2229;padding:10px 12px;color:#f5f6f7}
+.preview-glyph{display:grid;flex:none;place-items:center;width:42px;height:42px;border-radius:11px;
+ font:700 11px var(--font-ui);background:#3a2b37;border:1px solid #763f50;color:#ff8b9c}
+.preview-glyph.blueprint-glyph{background:#262f3f;border-color:#455e7c;color:#d7e6fd;font-size:20px}
+.preview-label{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0}
+.preview-label strong{font:800 13px/1.3 var(--font-ui);overflow-wrap:anywhere}
+.preview-label small{font:600 10px/1.3 var(--font-ui);color:#93a4ad;overflow-wrap:anywhere}
+.preview-arrow{font:700 19px var(--font-ui);color:#f46f86}
+.rank-headline{margin-top:27px}
+.hero{
+ margin:0 0 18px;border:1px solid #42525e;border-radius:17px;clip-path:none;
+ border-top:1px solid #51636d;padding:15px 15px 18px;
+ background:linear-gradient(130deg,#28323a,#171e25 53%,#33222c)
+}
+.hero:after{display:none}
+.hero:before{opacity:.3}
+.hero-top{font:700 9px var(--font-ui);letter-spacing:0}
+.identity-info h2{font-family:var(--font-ui);letter-spacing:-.04em}
+.progress-head strong{font-family:var(--font-display)}
+.stat-grid{gap:8px}
+.metric{border-radius:13px!important}
+#homePlayerData{margin-top:14px}
+#connectPanel{background:#1b232a;margin:24px 0;border:1px solid #384954;border-radius:16px;padding:15px}
+#connectPanel:before{display:none}
+.connect-prelude{border:0;padding-bottom:0}
+.connect-recon{border:0;border-radius:8px;background:#2b353a}
+.connect-card h1{font:800 clamp(28px,7vw,40px)/1.05 var(--font-ui);letter-spacing:-.04em;margin:12px 0}
+.connect-card>p{font:500 12px/1.5 var(--font-ui)}
+.connect-card input[type=text]{border-radius:10px;min-height:50px;padding:11px}
+.connect-card label:not(.consent){font:800 10px var(--font-ui)}
+.consent{font:500 11px/1.5 var(--font-ui)}
+/* Weapon browser mirrors standard companion app list > details hierarchy. */
+.meta-season{border-radius:13px;border-left:1px solid #64535e;padding:14px;margin:0 0 17px}
+.meta-season strong{font:800 19px/1.1 var(--font-ui);letter-spacing:-.03em}
+.meta-season small{font:600 9px var(--font-ui)}
+.meta-season>span{font:700 9px var(--font-ui)}
+.meta-season a{font:750 11px var(--font-ui)}
+.library-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:9px 0 13px}
+.library-header strong{font:800 18px var(--font-ui)}
+.library-header span{font:650 11px var(--font-ui);color:#9aaeb7}
+.browse-label,.blueprint-search-label{display:block;font:750 10px var(--font-ui);color:#a6b3b9;margin:6px 0}
+.library-search,.blueprint-search{
+ appearance:none;width:100%;background:#192128;border:1px solid #42505b;
+ color:#fff;border-radius:11px;font:550 14px var(--font-ui);
+ min-height:49px;padding:13px;margin:0 0 16px
+}
+.library-search:focus,.blueprint-search:focus{outline:2px solid #c64d69;outline-offset:1px}
+.meta-filters,.blueprint-filters{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:8px;margin:12px 0 16px;scrollbar-width:none}
+.meta-filters::-webkit-scrollbar,.blueprint-filters::-webkit-scrollbar{display:none}
+.meta-filters button,.blueprint-filters button{
+ min-width:max-content;min-height:38px;flex:0 0 auto;
+ background:#222c33;border:1px solid #3d4b55;border-radius:20px;
+ padding:9px 16px;color:#aebbc4;font:750 11px var(--font-ui)
+}
+.meta-filters button.selected,.blueprint-filters button.selected{background:#cf3852;border:1px solid #e94b66}
+.meta-weapons,.blueprint-list{display:flex;flex-direction:column;gap:9px;margin:0 0 20px}
+.meta-weapon{min-height:84px;border-radius:14px;border:1px solid #3e5059;border-left:1px solid #3e5059;
+ padding:13px 12px;background:#1b232a;grid-template-columns:43px minmax(0,1fr);gap:4px 10px}
+.meta-weapon.selected{border:1px solid #925263;border-left:1px solid #925263;background:#242632}
+.meta-weapon-class{width:43px;height:43px;grid-row:1/3;border-radius:10px;background:#532939;font:850 13px var(--font-ui)}
+.meta-weapon-info{justify-content:center;gap:5px}
+.meta-weapon-info strong{font:800 20px/1.1 var(--font-ui);letter-spacing:-.045em}
+.meta-weapon-info small{font:600 10px/1.3 var(--font-ui);color:#a8b6bc}
+.meta-weapon-arrow{right:15px;bottom:22px;font:700 18px var(--font-ui)}
+.blueprint-result-count{font:600 11px var(--font-ui);color:#a3b2ba;margin:8px 0 12px}
+.blueprint-card{
+ border:1px solid #3d4a54;border-left:1px solid #3d4a54;border-radius:14px;
+ padding:14px;min-height:103px;background:#1b232a;
+ display:grid;grid-template-columns:minmax(0,1fr) auto;
+ gap:5px 10px;text-align:left
+}
+.blueprint-card.selected{border:1px solid #b35265;border-left:1px solid #b35265;background:#262630}
+.blueprint-card strong{grid-column:1;grid-row:1;font:800 19px/1.15 var(--font-ui);letter-spacing:-.04em}
+.blueprint-card b{grid-column:1;grid-row:2;font:650 12px/1.3 var(--font-ui);color:#d0dbe0}
+.blueprint-card small{grid-column:1;grid-row:3;color:#8fa1ae;font:600 10px var(--font-ui)}
+.blueprint-card .blueprint-tier{grid-column:2;grid-row:1;align-self:start;padding:4px 7px;
+ border-radius:6px;background:#493044;color:#f7a4d8;font:750 9px var(--font-ui)}
+.blueprint-detail,.meta-detail{
+ border:1px solid #42535e;border-top:1px solid #42535e;border-radius:16px;
+ margin:0 0 15px;padding:18px 15px 20px;background:#1a2329;overflow:hidden
+}
+.back-link{
+ display:inline-flex;align-items:center;min-height:42px;
+ border:0;border-radius:9px;background:#27323a;color:#e5eef0;
+ padding:10px 14px;font:750 12px var(--font-ui);margin:0 0 20px
+}
+.meta-detail-head h2,.blueprint-detail-row h2{font:800 clamp(28px,8vw,40px)/1.1 var(--font-ui);letter-spacing:-.05em}
+.meta-detail-head small,.blueprint-detail-row small{font:750 10px var(--font-ui)}
+.meta-attachment-title{font:750 11px var(--font-ui);color:#c1cbd1}
+.meta-attachment{grid-template-columns:27px 94px minmax(0,1fr);border-bottom:1px solid #35434a}
+.meta-attachment b{font:750 14px var(--font-ui)}
+.meta-attachment span{font:650 10px var(--font-ui)}
+.meta-attachment strong{font:750 12px/1.35 var(--font-ui)}
+.meta-notes{border-radius:10px;border-left:2px solid #ae425c}
+.meta-source{border-color:#41505c}
+.meta-source strong{font:650 12px var(--font-ui)}
+.blueprint-fact span{font:700 10px var(--font-ui)}
+.blueprint-fact strong{font:750 12px var(--font-ui)}
+.blueprint-source-button{border-radius:11px}
+.browse-empty{padding:16px;border-radius:12px;background:#222a31;color:#9eaeb8;font:650 12px var(--font-ui)}
+.guest-prompt,.profile-connect{padding:22px 16px;border-radius:14px;border:1px solid #3c4c56;background:#1b242c;color:#aebbc2;font:550 13px/1.5 var(--font-ui)}
+.profile-connect{display:none}
+.profile-connect strong{display:block;font-size:17px;color:#fff}
+.profile-connect p{margin:8px 0 15px}
+body.guest .profile-connect{display:block}
+body.guest #pane-player > section.card,body.guest #pane-player > details{display:none}
+body.guest #pane-analytics .intel-hud,body.guest #pane-analytics section.card{display:none}
+.view-history{display:flex;width:100%;align-items:center;justify-content:space-between;
+ gap:9px;background:#202a31;border:1px solid #475860;color:#f1f3f3;
+ border-radius:12px;font:750 12px var(--font-ui);min-height:48px;padding:12px 15px;margin:5px 0 20px}
+.profile-hero{border-radius:13px}
+@media(max-width:390px){
+ #app{padding-left:12px;padding-right:12px}
+ .tabs button{font-size:8px;min-height:55px}
+ .hub-links{gap:6px}
+ .hub-link{padding:10px 7px;min-height:128px}
+ .hub-link small{font-size:8px}
+ .meta-attachment{grid-template-columns:23px 78px minmax(0,1fr);gap:6px}
+ .meta-attachment strong{font-size:11px}
+}
+@media(min-width:640px){
+ .hub-links{gap:14px}
+ .hub-link{min-height:150px;padding:18px}
+ .hub-link small{font-size:12px}
+ .hub-preview-list{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+ .meta-weapons,.blueprint-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .meta-detail,.blueprint-detail{max-width:680px;margin-left:auto;margin-right:auto}
+}
