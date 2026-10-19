@@ -63,11 +63,11 @@ function displayArt(id,fallbackId,url){
   if(!safe)return;
   el.onload=()=>{
     if(el.src!==safe)return;
-    if(id==="rankArt"){
+    if(id==="rankArt"||id==="profileRankArt"){
       // Only show authentic rank imagery and never blow a thumbnail up.
       const width=el.naturalWidth||0,height=el.naturalHeight||0;
       if(!width||!height){el.hidden=true;fallback.hidden=false;return}
-      const maxWidth=108,maxHeight=114;
+      const maxWidth=id==="rankArt"?108:75,maxHeight=id==="rankArt"?114:80;
       const scale=Math.min(1,maxWidth/width,maxHeight/height);
       el.style.width=Math.floor(width*scale)+"px";
       el.style.height=Math.floor(height*scale)+"px";
@@ -144,6 +144,7 @@ function render(){
   safeText("percent",Math.round(Math.min(1,player.xp/LEGENDARY)*100)+"% COMPLETE");
   safeText("xpRemaining",fmt(remaining)+" XP TO LEGENDARY");
   $("progressBar").style.width=(Math.min(100,player.xp/LEGENDARY*100))+"%";
+  document.querySelector(".track").setAttribute("aria-valuenow",String(Math.min(LEGENDARY,player.xp)));
   const next=MILESTONES.find(m=>player.xp<m[1]);
   safeText("nextTier",next?next[0]:"LEGENDARY UNLOCKED");
   safeText("nextXP",next?fmt(next[1]-player.xp)+" XP":"✓");
@@ -204,6 +205,7 @@ function renderPlayer(){
   safeText("profileName",player.nickname);safeText("profileRank",player.rank);
   safeText("profileLevel","LEVEL "+(player.level??"—"));
   displayArt("avatar","avatarFallback",player.pic);
+  displayArt("profileRankArt","profileRankFallback",player.rankArt);
   displayArt("levelArt","levelArtFallback",player.levelArt);
   const el=$("identityRows");el.replaceChildren();
   [
@@ -215,6 +217,9 @@ function renderPlayer(){
   ].forEach(([a,b])=>el.append(row(a,b)));
 }
 function renderAnalytics(){
+  safeText("intelCurrent",fmt(player.xp));
+  safeText("intelDelta",readings.length>1?signed(readings.at(-1).xp-readings[0].xp):"—");
+  safeText("intelSamples",fmt(readings.length)+" READINGS");
   const root=$("analyticsRows");root.replaceChildren();
   const deltas=readings.slice(1).map((r,i)=>r.xp-readings[i].xp);
   const plus=deltas.filter(n=>n>0),minus=deltas.filter(n=>n<0);
@@ -233,12 +238,20 @@ function renderAnalytics(){
   if(currentTab==="analytics")requestAnimationFrame(drawChart);
 }
 function renderHistory(){
+  safeText("logCount",fmt(readings.length));
   safeText("archiveCount",fmt(readings.length)+" stored XP readings (changes + baseline; up to 1,000)");
   const root=$("historyList");root.replaceChildren();
   if(!readings.length){const d=document.createElement("p");d.className="history-empty";d.textContent="No readings yet. Sync your account to start tracking.";root.append(d);return}
   readings.slice(-60).reverse().forEach((entry,reversedIndex)=>{
     const idx=readings.length-1-reversedIndex,delta=deltaAt(idx);
     const r=document.createElement("div");r.className="history-row";
+    if(idx>0&&entry.rank!==readings[idx-1].rank){
+      r.classList.add("rank-transition");
+      const promotion=entry.xp>readings[idx-1].xp;
+      const tag=document.createElement("small");tag.className="rank-transition-tag";
+      tag.textContent=promotion?"RANK UP // "+entry.rank:"RANK CHANGE // "+entry.rank;
+      r.append(tag);
+    }
     const icon=document.createElement("span");icon.className="arrow"+(delta<0?" loss":"");icon.textContent=delta===null?"•":delta<0?"↘":"↗";
     const date=document.createElement("span");date.className="date";date.textContent=new Date(entry.timestamp).toLocaleString();
     const note=document.createElement("small");note.textContent=entry.rank;date.append(note);
@@ -266,7 +279,8 @@ function drawChart(){
   ctx.textAlign="left";ctx.fillText(new Date(t0).toLocaleDateString(),margin.left,h-7);
   ctx.textAlign="right";ctx.fillText(new Date(t1).toLocaleDateString(),w-margin.right,h-7);
   ctx.beginPath();selected.forEach((x,i)=>{const a=atX(x.timestamp),b=atY(x.xp);i?ctx.lineTo(a,b):ctx.moveTo(a,b)});
-  ctx.strokeStyle="#f04452";ctx.lineWidth=3;ctx.lineJoin="round";ctx.stroke();
+  ctx.strokeStyle="#f04452";ctx.lineWidth=3;ctx.lineJoin="round";
+  ctx.shadowColor="#f0445266";ctx.shadowBlur=9;ctx.stroke();ctx.shadowBlur=0;
   selected.forEach(x=>{ctx.beginPath();ctx.arc(atX(x.timestamp),atY(x.xp),3.5,0,Math.PI*2);ctx.fillStyle="#ff8490";ctx.fill()});
 }
 function csvText(){
