@@ -76,7 +76,7 @@
       '<path d="M160 64 205 92 207 164 195 217 160 253 125 217 113 164 115 92Z" fill="var(--badge-dark)" stroke="var(--badge-edge)" stroke-width="4"/>'+
       '<path d="M160 78 197 101 197 164 186 205 160 232 134 205 123 164 123 101Z" fill="url(#'+prefix+'inner)" stroke="var(--badge-hi)" stroke-width="2" opacity=".85"/>'+
       crown+glyphCenter+
-      '<path d="M125 240 160 249 195 240 186 276 160 294 134 276Z" fill="url(#outer)" stroke="var(--badge-hi)" stroke-width="4"/>'+
+      '<path d="M125 240 160 249 195 240 186 276 160 294 134 276Z" fill="url(#'+prefix+'outer)" stroke="var(--badge-hi)" stroke-width="4"/>'+
       symbol+
       '<path d="m134 115 15-16m27 0 12 16" stroke="var(--badge-hi)" stroke-width="2" opacity=".75"/>'+
       '</svg>';
