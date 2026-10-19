@@ -1,9 +1,7 @@
 "use strict";
 const $ = id => document.getElementById(id);
 const LEGENDARY = 8001;
-const MILESTONES = [
-  ["GM II",6400],["GM III",6800],["GM IV",7200],["GM V",7600],["LEGEND",8001]
-];
+const RANKS = window.RankProgress;
 const STORAGE_PREFIX = "rankcommand-web-v1-";
 const fmt = x => x == null || !Number.isFinite(x) ? "—" : Math.round(x).toLocaleString("en-US");
 const signed = x => x == null || !Number.isFinite(x) ? "—" : (x > 0 ? "+" : "") + fmt(x);
@@ -82,17 +80,18 @@ async function refresh(force=false){
   if(!navigator.onLine){setStatus("Offline · saved readings available","error");return}
   if(!force&&player?.checkedAt&&Date.now()-player.checkedAt<60000)return;
   refreshing=true;setStatus("Syncing live Multiplayer XP…");
+  const requestedUID=uid;
   $("refreshBtn").disabled=true;
   try{
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),12000);
     let response;
-    try{response=await fetch("/api/player?uid="+encodeURIComponent(uid),{cache:"no-store",signal:controller.signal,headers:{"Accept":"application/json"}})}
+    try{response=await fetch("/api/player?uid="+encodeURIComponent(requestedUID),{cache:"no-store",signal:controller.signal,headers:{"Accept":"application/json"}})}
     finally{clearTimeout(timeout)}
     const result=await response.json().catch(()=>null);
     if(!response.ok)throw new Error(result?.error||"Stats service unavailable ("+response.status+")");
     const newPlayer=normalPlayer(result);
-    if(uid!==load("uid",""))return;
+    if(uid!==requestedUID)return;
     player=newPlayer;
     if(!readings.length||readings[readings.length-1].xp!==player.xp||readings[readings.length-1].rank!==player.rank){
       readings.push({timestamp:player.checkedAt,xp:player.xp,rank:player.rank});
@@ -115,12 +114,14 @@ function connect(newUID){
   render();refresh(true);
 }
 function showTab(tab){
+  const changed=currentTab!==tab;
   currentTab=tab;
   document.querySelectorAll("[data-tab]").forEach(b=>{
     const on=b.dataset.tab===tab;b.classList.toggle("active",on);
     b.setAttribute("aria-current",on?"page":"false");
   });
   document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("active",p.id==="pane-"+tab));
+  if(changed)window.scrollTo({top:0,behavior:"auto"});
   if(tab==="analytics")requestAnimationFrame(drawChart);
 }
 function deltaAt(i){return i>0?readings[i].xp-readings[i-1].xp:null}
@@ -137,17 +138,18 @@ function todayNet(){
 function render(){
   if(!player)return;
   const remaining=Math.max(0,LEGENDARY-player.xp);
-  safeText("rankLabel",player.rank);
+  const promotion=RANKS.promotion(player.xp);
+  safeText("rankLabel",player.rank); // Trust actual account rank over inferred divisions.
   safeText("playerName",player.nickname);
   safeText("levelBadge","LEVEL "+(player.level??"—"));
   safeText("currentXP",fmt(player.xp));
-  safeText("percent",Math.round(Math.min(1,player.xp/LEGENDARY)*100)+"% COMPLETE");
-  safeText("xpRemaining",fmt(remaining)+" XP TO LEGENDARY");
-  $("progressBar").style.width=(Math.min(100,player.xp/LEGENDARY*100))+"%";
+  safeText("percent",Math.round(RANKS.progress(player.xp))+"% TO LEGENDARY");
+  safeText("xpRemaining",promotion.complete?"LEGENDARY REACHED":fmt(remaining)+" XP TO LEGENDARY");
+  $("progressBar").style.width=RANKS.progress(player.xp)+"%";
   document.querySelector(".track").setAttribute("aria-valuenow",String(Math.min(LEGENDARY,player.xp)));
-  const next=MILESTONES.find(m=>player.xp<m[1]);
-  safeText("nextTier",next?next[0]:"LEGENDARY UNLOCKED");
-  safeText("nextXP",next?fmt(next[1]-player.xp)+" XP":"✓");
+  safeText("nextTier",promotion.complete?"LEGENDARY":" "+promotion.label);
+  safeText("nextXP",promotion.complete?"✓":fmt(promotion.remaining)+" XP");
+  safeText("checkpointNote",promotion.estimated?"Estimated GM subdivision threshold · game display takes precedence":"");
   safeText("liveBadge","LAST READING");
   safeText("lastCheck",new Date(player.checkedAt).toLocaleString(undefined,{hour:"numeric",minute:"2-digit"}));
   displayArt("rankArt","badgeUnavailable",player.rankArt);
@@ -164,19 +166,27 @@ function render(){
 
 function renderMilestones(){
   const root=$("milestones");root.replaceChildren();
-  const first=MILESTONES.find(x=>player.xp<x[1]);
-  MILESTONES.forEach(([title,threshold])=>{
+  const upcoming=RANKS.next(player.xp);
+  const marks=RANKS.nearby(player.xp,6);
+  const band=RANKS.currentBand(player.xp);
+  safeText("promotionContext",band.name+" → LEGENDARY");
+  safeText("milestoneNote",marks.some(x=>x.estimated)
+    ?"Grand Master subdivisions are approximate checkpoints; your in-game division and provider rank take priority."
+    :"Rank thresholds are guide-based; the provider's actual displayed rank takes priority.");
+  marks.forEach(({label,at,estimated})=>{
+    const passed=player.xp>=at;
+    const isNext=upcoming?.at===at;
     const el=document.createElement("button");el.type="button";
-    el.className="milestone"+(player.xp>=threshold?" done":first?.[1]===threshold?" next":"");
-    el.setAttribute("aria-label",title+" milestone: "+fmt(threshold)+" rank XP. Tap for progress.");
-    const icon=document.createElement("div");icon.className="badge";icon.textContent=player.xp>=threshold?"✓":title==="LEGEND"?"♛":"✦";
-    const label=document.createElement("b");label.textContent=title;
-    const number=document.createElement("small");number.textContent=fmt(threshold);
-    el.append(icon,label,number);
+    el.className="milestone"+(passed?" done":isNext?" next":"");
+    el.setAttribute("aria-label",label+": "+fmt(at)+" XP"+(estimated?" (approximate)":""));
+    const icon=document.createElement("div");icon.className="badge";icon.textContent=passed?"✓":isNext?"↗":"·";
+    const name=document.createElement("b");name.textContent=label;
+    const point=document.createElement("small");point.textContent=fmt(at)+" XP"+(estimated?"*":"");
+    el.append(icon,name,point);
     el.addEventListener("click",()=>{
-      root.querySelectorAll(".milestone").forEach(item=>item.classList.remove("selected"));
+      root.querySelectorAll(".milestone").forEach(node=>node.classList.remove("selected"));
       el.classList.add("selected");
-      note(player.xp>=threshold ? title+" achieved!" : title+": "+fmt(threshold-player.xp)+" XP remaining.");
+      note(passed?label+" checkpoint passed":label+": "+fmt(at-player.xp)+" XP to checkpoint"+(estimated?" (estimate)":""));
     });
     root.append(el);
   });
@@ -204,6 +214,9 @@ function countryName(code){
 function renderPlayer(){
   safeText("profileName",player.nickname);safeText("profileRank",player.rank);
   safeText("profileLevel","LEVEL "+(player.level??"—"));
+  safeText("profileXP",fmt(player.xp));
+  const checkpoint=RANKS.promotion(player.xp);
+  safeText("profileNext",checkpoint.complete?"COMPLETE":checkpoint.label);
   displayArt("avatar","avatarFallback",player.pic);
   displayArt("profileRankArt","profileRankFallback",player.rankArt);
   displayArt("levelArt","levelArtFallback",player.levelArt);
@@ -241,6 +254,25 @@ function renderHistory(){
   safeText("logCount",fmt(readings.length));
   safeText("archiveCount",fmt(readings.length)+" stored XP readings (changes + baseline; up to 1,000)");
   const root=$("historyList");root.replaceChildren();
+  const eventRoot=$("rankEvents");eventRoot.replaceChildren();
+  const events=[];
+  for(let i=1;i<readings.length;i++){
+    const previous=readings[i-1],current=readings[i];
+    if(current.rank!==previous.rank||RANKS.isReset(previous,current)){
+      events.push({
+        time:current.timestamp,rank:current.rank,xp:current.xp,
+        label:RANKS.isReset(previous,current)?"POSSIBLE SEASON RESET":current.xp>previous.xp?"RANK INCREASE":"RANK CHANGE"
+      });
+    }
+  }
+  if(!events.length){const p=document.createElement("p");p.textContent="No rank changes detected in saved readings yet.";p.className="event-empty";eventRoot.append(p)}
+  else events.slice(-3).reverse().forEach(e=>{
+    const block=document.createElement("div");block.className="event-item";
+    const tag=document.createElement("small");tag.textContent=e.label;
+    const title=document.createElement("strong");title.textContent=e.rank;
+    const date=document.createElement("span");date.textContent=new Date(e.time).toLocaleDateString()+" · "+fmt(e.xp)+" XP";
+    block.append(tag,title,date);eventRoot.append(block);
+  });
   if(!readings.length){const d=document.createElement("p");d.className="history-empty";d.textContent="No readings yet. Sync your account to start tracking.";root.append(d);return}
   readings.slice(-60).reverse().forEach((entry,reversedIndex)=>{
     const idx=readings.length-1-reversedIndex,delta=deltaAt(idx);
@@ -249,7 +281,7 @@ function renderHistory(){
       r.classList.add("rank-transition");
       const promotion=entry.xp>readings[idx-1].xp;
       const tag=document.createElement("small");tag.className="rank-transition-tag";
-      tag.textContent=promotion?"RANK UP // "+entry.rank:"RANK CHANGE // "+entry.rank;
+      tag.textContent=RANKS.isReset(readings[idx-1],entry)?"POSSIBLE SEASON RESET":promotion?"RANK INCREASE // "+entry.rank:"RANK CHANGE // "+entry.rank;
       r.append(tag);
     }
     const icon=document.createElement("span");icon.className="arrow"+(delta<0?" loss":"");icon.textContent=delta===null?"•":delta<0?"↘":"↗";
@@ -287,6 +319,45 @@ function csvText(){
   const q=s=>'"'+String(s).replaceAll('"','""')+'"';
   return "timestamp_iso,multiplayer_ranked_xp,rank,xp_change_since_previous_reading\r\n"+
     readings.map((x,i)=>[new Date(x.timestamp).toISOString(),x.xp,q(x.rank),i===0?"":x.xp-readings[i-1].xp].join(",")).join("\r\n");
+}
+function downloadFile(blob,name){
+  const url=URL.createObjectURL(blob),link=document.createElement("a");
+  link.href=url;link.download=name;document.body.append(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+function backupHistory(){
+  if(!uid){note("Connect a player first.");return}
+  const payload={format:"rankcommand-xp-backup",version:1,uid,
+    createdAt:new Date().toISOString(),readings:readings.map(x=>({timestamp:x.timestamp,xp:x.xp,rank:x.rank}))};
+  downloadFile(new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),
+    "rank-command-"+uid+"-backup.json");
+  note("Backup download started. Keep this file somewhere safe.");
+}
+async function restoreHistory(file){
+  if(!file)return;
+  if(file.size>2000000){note("Backup is too large (2 MB maximum).");return}
+  try{
+    const data=JSON.parse(await file.text());
+    if(data?.format!=="rankcommand-xp-backup"||data.version!==1||!Array.isArray(data.readings))
+      throw new Error("This is not a Rank Command backup.");
+    if(data.uid!==uid)throw new Error("This backup belongs to another player UID.");
+    if(data.readings.length>1500)throw new Error("Backup contains too many readings.");
+    const now=Date.now();
+    const valid=x=>x&&Number.isSafeInteger(x.xp)&&x.xp>=0&&x.xp<100000000&&
+      Number.isSafeInteger(x.timestamp)&&x.timestamp>0&&x.timestamp<now+86400000&&
+      typeof x.rank==="string"&&x.rank.length>0&&x.rank.length<=80;
+    if(!data.readings.every(valid))throw new Error("Backup has invalid records.");
+    if(!data.readings.length){note("Backup contains no readings.");return}
+    const merged=[...readings,...data.readings.map(x=>({timestamp:x.timestamp,xp:x.xp,rank:x.rank}))];
+    const unique=new Map();
+    merged.forEach(x=>unique.set([x.timestamp,x.xp,x.rank].join("/"),x));
+    const next=[...unique.values()].sort((a,b)=>a.timestamp-b.timestamp).slice(-1000);
+    const additional=next.length-readings.length;
+    if(!confirm("Restore "+data.readings.length+" backed-up readings for this UID? Existing records will be merged; at most 1,000 latest readings are kept."))return;
+    readings=next;store(uidKey("readings"),readings);
+    render();
+    note("Backup merged · "+fmt(Math.max(0,additional))+" additional saved readings.");
+  }catch(error){note(error?.message||"Couldn't read this backup.")}
 }
 function exportHistory(){
   if(!readings.length){note("No recorded history to export yet.");return}
@@ -335,6 +406,13 @@ $("connectForm").addEventListener("submit",e=>{e.preventDefault();connect($("uid
 $("refreshBtn").addEventListener("click",()=>refresh(true));
 $("copyUID").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(uid);note("Player UID copied.")}catch{note("Clipboard unavailable: select your UID in Player.")}});
 $("exportBtn").addEventListener("click",exportHistory);
+$("backupBtn").addEventListener("click",backupHistory);
+$("restoreBtn").addEventListener("click",()=>$("restoreFile").click());
+$("restoreFile").addEventListener("change",async event=>{
+  const file=event.target.files?.[0];
+  await restoreHistory(file);
+  event.target.value="";
+});
 $("disconnectBtn").addEventListener("click",()=>{uid="";player=null;readings=[];store("uid","");store("acceptedUid","");showConnect();showTab("command")});
 $("clearBtn").addEventListener("click",()=>{if(!uid||!confirm("Delete this player's locally saved XP history? This won't affect COD Mobile."))return;readings=[];store(uidKey("readings"),readings);render();note("Local XP history erased.")});
 $("shareBtn").addEventListener("click",async()=>{
