@@ -107,7 +107,7 @@ jobs:
           assert.ok(html.includes('data-tab="meta"'));
           for(const id of ['metaWeapons','metaAttachments','metaTTK','metaCopy','metaSourceLink','metaSourceText','metaNotes'])
             assert.ok(html.includes('id="'+id+'"'),'missing meta UI '+id);
-          assert.ok(js.includes('if(tab==="meta")renderMeta()'));
+          assert.ok(js.includes('if(tab==="meta")switchWeaponMode(weaponMode)'));
           assert.ok(js.includes('build.ttk==null?"NOT VERIFIED"'));
           assert.ok(css.includes('.meta-weapons'));
           assert.ok(css.includes('grid-template-columns:repeat(5,minmax(0,1fr))'));
