@@ -1,0 +1,19 @@
+{
+  "name": "Rank Command — CODM Ranked Companion",
+  "short_name": "Rank Command",
+  "description": "Fan-made COD Mobile Multiplayer Ranked XP tracker with profile, analytics and history.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0b111b",
+  "theme_color": "#0b111b",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
