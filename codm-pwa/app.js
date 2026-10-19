@@ -19,11 +19,14 @@ function loadAccount(){
 }
 function showConnect(){
   $("connectPanel").hidden=false;
-  $("dashboard").hidden=true;
+  $("dashboard").hidden=false;
+  $("homePlayerData").hidden=true;
+  document.body.classList.add("guest");
   $("uidInput").value=uid;
   $("consent").checked=false;
-  safeText("netMessage","Connect your CODM player UID");
+  safeText("netMessage","Browse weapons or connect a player");
   safeText("lastCheck","");
+  renderHomeDiscover();
 }
 function setStatus(label,state="idle"){
   safeText("netMessage",label);
@@ -121,14 +124,17 @@ function connect(newUID){
   uid=newUID;store("uid",uid);store("acceptedUid",uid);
   loadAccount();
   $("connectPanel").hidden=true;$("dashboard").hidden=false;
-  render();refresh(true);
+  $("homePlayerData").hidden=false;
+  document.body.classList.remove("guest");
+  renderHomeDiscover();render();refresh(true);
 }
 function showTab(tab){
   const changed=currentTab!==tab;
   currentTab=tab;
   showNavigationDock();
   document.querySelectorAll("[data-tab]").forEach(b=>{
-    const on=b.dataset.tab===tab;b.classList.toggle("active",on);
+    const on=b.dataset.tab===(tab==="history"?"analytics":tab);
+    b.classList.toggle("active",on);
     b.setAttribute("aria-current",on?"page":"false");
   });
   document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("active",p.id==="pane-"+tab));
@@ -139,7 +145,9 @@ function showTab(tab){
     requestAnimationFrame(()=>window.scrollTo(0,0));
   }
   if(tab==="analytics")requestAnimationFrame(drawChart);
-  if(tab==="meta")switchWeaponMode(weaponMode);
+  if(tab==="meta")renderMeta();
+  if(tab==="blueprints")renderBlueprints();
+  if(tab==="command")renderHomeDiscover();
 }
 function deltaAt(i){return i>0?readings[i].xp-readings[i-1].xp:null}
 function netWithin(ms){
@@ -153,7 +161,11 @@ function todayNet(){
   return xs.length<2?null:xs[xs.length-1].xp-xs[0].xp;
 }
 function render(){
+  renderHomeDiscover();
   if(!player)return;
+  document.body.classList.remove("guest");
+  $("homePlayerData").hidden=false;
+  $("statsGuest").hidden=true;
   safeText("rankLabel",player.rank); // Provider's actual account rank, not an inferred division.
   safeText("playerName",player.nickname);
   safeText("levelBadge","LEVEL "+(player.level??"—"));
@@ -619,5 +631,13 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden&&uid)refre
 window.addEventListener("resize",()=>{if(currentTab==="analytics")drawChart()});
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));
 const previous=load("uid",""),accepted=load("acceptedUid","");
-if(validUID(previous)&&accepted===previous){uid=previous;loadAccount();$("connectPanel").hidden=true;$("dashboard").hidden=false;render();setStatus("Showing saved readings · checking live status");refresh(false)}
-else showConnect();
+if(validUID(previous)&&accepted===previous){
+  uid=previous;loadAccount();
+  $("connectPanel").hidden=true;$("dashboard").hidden=false;
+  $("homePlayerData").hidden=!player;
+  if(player)render();
+  else document.body.classList.add("guest");
+  renderHomeDiscover();
+  setStatus("Showing saved readings · checking live status");
+  refresh(false);
+}else showConnect();
