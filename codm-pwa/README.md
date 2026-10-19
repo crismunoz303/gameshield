@@ -1,22 +1,13 @@
-# Rank Command — shareable free CODM iPhone PWA
+# Rank Command — authentic rank badges (Web v1.3.0)
 
-A standalone installable web companion for COD Mobile. No developer certificate, signing app, or native IPA is needed. Built as an independent PWA in `crismunoz303/gameshield`, branch `codm-rank-tracker`, folder `codm-pwa`.
+A free installable iPhone web companion for Call of Duty Mobile Ranked. Native iPhone signing is not required.
 
-## Hosting
+**Art rule:** The hero displays only the original CODM rank image URL returned by the unofficial Codashop-based account lookup for each player's actual MP rank. Rank images are limited to their native pixel dimensions or smaller, with glow rendered separately outside the original PNG. The former custom vector badges and gallery have been removed from the live site.
 
-Deploy this folder as the Vercel project root. Vercel's `api/player.js` provides the same-origin read-only proxy to the unofficial `callofdutymobile.vercel.app/user/:uid` service. Static web files serve the installable PWA. The app is for sharing via URL; users tap Safari Share → Add to Home Screen.
+The upstream PNGs are sometimes tiny. Keeping them at their native size avoids making them look worse, but does **not** make them HD. No verified complete set of original high-resolution CODM images for all divisions was located. Never describe the provider's thumbnail as HD, replace it with made-up insignias, or invent rank art for missing fields.
 
-## Data
+The site supports Rookie, Veteran, Elite, Pro, Master, Grand Master and Legendary implicitly through the per-user rank image URL returned by the lookup. Subdivisions are likewise determined by the service response, not guessed. A missing rank art link displays a text placeholder rather than fake artwork.
 
-Live returned account fields: nickname, multiplayer rank, rank XP, player level, avatar URL, country code and ID, player short ID, level image URL, rank class and artwork URL. All available fields are in **Player**. Estimated rank milestones and wins-per-XP are in **Command**. Calculated XP deltas, daily/weekly changes, gains/losses and chart are in **Analytics**. The previous observations on the same phone are in **History**, with CSV export.
+Data and privacy: The player enters their own UID; the website passes it to the unofficial provider. Stats are cached and XP-history stored locally per UID. No passwords, match automation or account changes. See `api/player.js`.
 
-This provider does not offer genuine match history, K/D, kills, deaths, BR rank, loadouts or win rate. Never present these as retrieved. The proxy explicitly excludes the separate state-changing `dailyGift` endpoint.
-
-## Privacy and caveats
-
-- Each user enters their own UID and consents; the site ships without anyone's UID.
-- Provider receives UID and IP, subject to its own handling. Site forwards only numeric UIDs and whitelists response fields. UID and readings persist only in browser localStorage. No central account database or analytics scripts. Local cache of upstream reads for 20 seconds may occur within a function instance.
-- The source and unofficial API are not affiliated with Activision. Upstream reliability and authorization are not guaranteed. COD Mobile terms restrict unauthorized data collection.
-- Update freshness is on open/return (no more than once per 60 seconds), manual refresh, or returning online. Offline shell remains available, while remote sync requires internet.
-- XP changes represent intervals between readings, not verified individual matches. No credentials collected.
-- App uses service worker for offline shell. HTTPS hosting required for Add to Home Screen experience.
+To host: Deploy `codm-pwa` as static+serverless on Vercel. Safari → Share → Add to Home Screen.
