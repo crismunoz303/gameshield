@@ -559,3 +559,37 @@ body:after{
  .meta-weapons{gap:5px}
  .meta-weapon{padding:9px 6px;grid-template-columns:20px minmax(0,1fr)}
 }
+
+/* RELEASE 07 — evidence-first gunsmith / blueprints catalog */
+.weapon-modes{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:6px 0 23px}
+.weapon-modes button{min-height:47px;border:1px solid #626f7699;background:#21292e;color:#bfc8c9;font:800 12px var(--font-ui)}
+.weapon-modes button.selected{border-color:#ec5164;background:linear-gradient(115deg,#9d2436,#e13a50);color:#fff;box-shadow:inset 0 2px #ffa9b188}
+.blueprint-heading strong{font-size:clamp(20px,5vw,28px);overflow-wrap:anywhere}
+.blueprint-search-label{display:block;font:700 9px var(--font-mono);color:#adbfc3;margin:10px 0 8px}
+.blueprint-search{display:block;width:100%;min-height:48px;border:1px solid #6a7b8088;background:#182126;color:#f6f4ef;padding:12px 11px;font:600 13px var(--font-ui);border-radius:0}
+.blueprint-search:focus{outline:1px solid #f25063;border-color:#ef566a}
+.blueprint-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:11px 0}
+.blueprint-filters button{border:1px solid #68798088;background:#222b30;color:#c1c9c9;padding:11px 6px;font:800 9px/1.3 var(--font-ui);min-height:44px}
+.blueprint-filters button.selected{background:#a5273b;color:#fff;border-color:#ff7684}
+.blueprint-result-count{font:650 9px var(--font-mono);color:#adbabc;margin:14px 0 8px}
+.blueprint-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-bottom:20px}
+.blueprint-card{display:flex;flex-direction:column;gap:7px;min-width:0;min-height:119px;padding:12px 9px;text-align:left;background:linear-gradient(130deg,#1f2a30,#1a1e24);border:1px solid #5b6c7788;border-left:3px solid #6a7680;color:#e8eaeb}
+.blueprint-card.selected{background:linear-gradient(130deg,#512732,#22262b);border-color:#ba3c52;border-left-color:#f66073}
+.blueprint-tier{font:700 8px/1.25 var(--font-mono);color:#fa95a3;letter-spacing:.04em}
+.blueprint-card strong{font:700 clamp(21px,6.1vw,30px)/.86 var(--font-display);overflow-wrap:anywhere}
+.blueprint-card b{font:750 11px/1.35 var(--font-ui);overflow-wrap:anywhere}
+.blueprint-card small{font:600 8px/1.25 var(--font-mono);color:#b3c0c3}
+.blueprint-detail{background:#192128;border-top:3px solid var(--red);border-left:1px solid #56687388;border-right:1px solid #56687388;border-bottom:1px solid #56687388;padding:15px 12px 17px;margin-bottom:15px}
+.blueprint-detail-row{display:grid;grid-template-columns:minmax(0,1fr) 103px;gap:11px;align-items:center;border-bottom:1px solid #67777f66;padding-bottom:15px;margin-bottom:4px}
+.blueprint-detail-row>div:first-child{display:flex;flex-direction:column;gap:8px;min-width:0}
+.blueprint-detail-row small{font:600 9px var(--font-mono);color:#abb9c1}
+.blueprint-detail-row h2{font:700 clamp(24px,7.1vw,41px)/.96 var(--font-display);margin:0;overflow-wrap:anywhere}
+.blueprint-detail-row strong{font:700 11px var(--font-ui);color:#ff91a0}
+.blueprint-fact{display:grid;grid-template-columns:minmax(0,45%) minmax(0,55%);gap:9px;align-items:start;padding:14px 3px;border-bottom:1px solid #60717966}
+.blueprint-fact span{font:650 9px/1.5 var(--font-mono);color:#a7bbc1}
+.blueprint-fact strong{font:700 11px/1.45 var(--font-ui);text-align:right;overflow-wrap:anywhere;color:#f1eded}
+.blueprint-source-button{display:block;margin-top:18px;text-align:center;text-decoration:none;background:#ad2e42;color:#fff;padding:13px 10px;font:800 11px var(--font-ui)}
+.rank-reference-note{padding:10px;border-left:2px solid #ff6b76;background:#321f273a;margin:10px 0 15px!important;color:#c4c6c7}
+.rank-reference-note a{color:#ff9da8;text-decoration:underline}
+@media(min-width:640px){.blueprint-list{grid-template-columns:repeat(3,minmax(0,1fr))}.blueprint-filters{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:380px){.blueprint-card{padding:10px 7px}.blueprint-card b{font-size:10px}.blueprint-detail-row{grid-template-columns:minmax(0,1fr) 86px}.blueprint-detail-row h2{font-size:28px}.blueprint-fact{grid-template-columns:minmax(0,40%) minmax(0,60%)}.blueprint-filters button{font-size:8px}}
