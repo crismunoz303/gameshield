@@ -118,7 +118,7 @@ jobs:
             assert.equal(entry.attachments.length,5);
             assert.equal(entry.ttk,null,'Unverified TTK cannot be published as numeric');
             assert.equal(entry.ttkStatus,'NOT VERIFIED');
-            assert.ok(/^https:\\/\\//.test(entry.url));
+            assert.ok(entry.url.startsWith('https://'));
             for(const part of entry.attachments){
               assert.ok(part.slot.length>1&&part.name.length>2);
             }
