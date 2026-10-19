@@ -69,7 +69,12 @@ jobs:
             assert.ok(js.includes(marker),'missing feature '+marker);
           assert.ok(css.includes('env(safe-area-inset-top'));
           assert.ok(css.includes('.source-details'));
+          assert.ok(css.includes('padding-top:max(76px'));
+          assert.ok(css.includes('.tabs.dock-retracted'));
+          assert.ok(js.includes('accumulatedDockTravel'));
+          assert.ok(js.includes('showNavigationDock()'));
+          assert.ok(js.includes('document.documentElement.scrollTop=0'));
           assert.ok(sw.includes('/progression.js'));
-          assert.ok(sw.includes('rankcommand-static-v11'));
+          assert.ok(sw.includes('rankcommand-static-v12'));
           console.log('PASS: all seven ranks, GM checkpoints, original artwork, UID safety, backup controls, responsive styling');
           NODE
