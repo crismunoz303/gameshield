@@ -151,7 +151,7 @@ function render(){
   safeText("nextXP",next?fmt(next[1]-player.xp)+" XP":"✓");
   safeText("liveBadge","LAST READING");
   safeText("lastCheck",new Date(player.checkedAt).toLocaleString(undefined,{hour:"numeric",minute:"2-digit"}));
-  displayArt("rankArt","fallbackEmblem",player.rankArt);
+  renderRankVector();
   const last=readings.length>1?deltaAt(readings.length-1):null;
   safeText("mDelta",signed(last));
   safeText("mToday",signed(todayNet()));
@@ -159,6 +159,30 @@ function render(){
   safeText("mBest",readings.length?fmt(Math.max(...readings.map(x=>x.xp))):"—");
   renderMilestones();renderPlanner();renderPlayer();renderAnalytics();renderHistory();
 }
+
+function renderRankVector(){
+  const tier=window.RankArt?.resolve(player?.rank);
+  const svg=window.RankArt?.render(player?.rank)||"";
+  const out=$("rankVector");
+  out.innerHTML=svg; // Constructed only from fixed local SVG paths and sanitized rank mapping.
+  const glow=tier?.glow||"#9eb1c4";
+  $("interactiveRank").style.setProperty("--rank-glow",glow);
+  $("interactiveRank").setAttribute("aria-label",(tier?.label||"Unknown")+" rank — touch to charge the HD companion emblem");
+}
+function renderRankGallery(){
+  const root=$("rankGallery");
+  if(!root||root.dataset.ready==="true"||!window.RankArt)return;
+  root.dataset.ready="true";
+  window.RankArt.tiers.forEach(tier=>{
+    const item=document.createElement("div");item.className="rank-gallery-item";
+    item.style.setProperty("--gallery-glow",tier.glow);
+    const art=document.createElement("div");art.className="rank-gallery-badge";
+    art.innerHTML=window.RankArt.render(tier.label);
+    const label=document.createElement("strong");label.textContent=tier.label.toUpperCase();
+    item.append(art,label);root.append(item);
+  });
+}
+
 function renderMilestones(){
   const root=$("milestones");root.replaceChildren();
   const first=MILESTONES.find(x=>player.xp<x[1]);
@@ -201,6 +225,8 @@ function countryName(code){
 function renderPlayer(){
   safeText("profileName",player.nickname);safeText("profileRank",player.rank);
   safeText("profileLevel","LEVEL "+(player.level??"—"));
+  displayArt("originalRankArt","originalArtFallback",player.rankArt);
+  renderRankGallery();
   displayArt("avatar","avatarFallback",player.pic);
   displayArt("levelArt","levelArtFallback",player.levelArt);
   const el=$("identityRows");el.replaceChildren();
