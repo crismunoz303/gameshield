@@ -1,4 +1,4 @@
-name: Verify CODM web rank art
+name: Verify Rank Command web app
 on:
   push:
     branches: [codm-rank-tracker]
@@ -7,7 +7,7 @@ on:
       - '.github/workflows/verify-codm-web.yml'
   workflow_dispatch:
 jobs:
-  validate-web:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,24 +17,59 @@ jobs:
       - name: Check all JavaScript syntax
         run: |
           node --check codm-pwa/app.js
+          node --check codm-pwa/progression.js
           node --check codm-pwa/sw.js
           node --check codm-pwa/api/player.js
-      - name: Verify authentic original rank art flow
+      - name: Test every rank and all major interfaces
         run: |
           node <<'NODE'
-          const fs=require('fs');
+          const assert=require('node:assert/strict');
+          const fs=require('node:fs');
+          const ranks=require('./codm-pwa/progression.js');
           const html=fs.readFileSync('codm-pwa/index.html','utf8');
           const js=fs.readFileSync('codm-pwa/app.js','utf8');
+          const css=fs.readFileSync('codm-pwa/style.css','utf8');
           const sw=fs.readFileSync('codm-pwa/sw.js','utf8');
-          for(const term of ['id="rankArt"','id="badgeUnavailable"','id="interactiveRank"']){
-            if(!html.includes(term))throw Error('Missing original rank art UI: '+term);
-          }
-          for(const forbidden of ['id="rankGallery"','id="rankVector"','/rank-art.js']){
-            if(html.includes(forbidden)||sw.includes(forbidden))throw Error('Custom rank art still active: '+forbidden);
-          }
-          if(!js.includes('displayArt("rankArt","badgeUnavailable",player.rankArt)'))throw Error('Live source image no longer used');
-          if(!js.includes('Math.min(1,maxWidth/width,maxHeight/height)'))throw Error('Original image might be enlarged above native size');
-          if(!js.includes('function allowedArt(raw)'))throw Error('Original image URL validation missing');
-          if(fs.existsSync('codm-pwa/rank-art.js'))throw Error('Fake rank insignias not deleted');
-          console.log('Only authentic per-user rank images; no invented badges; native resolution limit verified.');
+          const expected=[
+            [0,'ROOKIE'],[1001,'VETERAN'],[2001,'ELITE'],[3001,'PRO'],
+            [4501,'MASTER'],[6001,'GRAND MASTER'],[8001,'LEGENDARY']
+          ];
+          for(const [xp,name] of expected)assert.equal(ranks.currentBand(xp).name,name);
+          assert.equal(ranks.promotion(6074).label,'GM II');
+          assert.equal(ranks.promotion(6074).remaining,326);
+          assert.equal(ranks.promotion(6074).estimated,true);
+          assert.equal(ranks.promotion(100).label,'ROOKIE II');
+          assert.equal(ranks.promotion(4500).label,'MASTER');
+          assert.equal(ranks.promotion(8001).complete,true);
+          assert.equal(ranks.promotion(15000).remaining,0);
+          assert.equal(ranks.progress(8001),100);
+          assert.equal(ranks.progress(0),0);
+          assert.equal(ranks.nearby(3500).length,6);
+          assert.equal(ranks.isReset({xp:8200},{xp:5000}),true);
+          assert.equal(ranks.isReset({xp:7200},{xp:7000}),false);
+          assert.ok(!ranks.CHECKPOINTS.some((a,i)=>i&&a.at<=ranks.CHECKPOINTS[i-1].at));
+          assert.ok(html.indexOf('/progression.js')<html.indexOf('/app.js'));
+          for(const id of ['rankArt','badgeUnavailable','profileRankArt','profileXP','profileNext',
+                           'milestones','checkpointNote','rankEvents','backupBtn',
+                           'restoreBtn','restoreFile','intelCurrent','logCount','clearBtn',
+                           'archiveCount','historyList','connectForm','uidInput'])
+            assert.ok(html.includes('id="'+id+'"'),'missing '+id);
+          for(const marker of ['data-tab="command"','data-tab="player"','data-tab="analytics"','data-tab="history"'])
+            assert.ok(html.includes(marker),marker);
+          for(const forbidden of ['id="rankGallery"','id="rankVector"','RANK COMMAND / RELEASE',
+                                  'FAN-MADE · READ-ONLY · NOT AFFILIATED','<footer>'])
+            assert.ok(!html.includes(forbidden),'forbidden UI '+forbidden);
+          assert.ok(js.includes('displayArt("rankArt","badgeUnavailable",player.rankArt)'));
+          assert.ok(js.includes('Math.min(1,maxWidth/width,maxHeight/height)'));
+          assert.ok(js.includes('function allowedArt(raw)'));
+          assert.ok(!fs.existsSync('codm-pwa/rank-art.js'));
+          for(const marker of ['rankcommand-xp-backup','requestedUID=uid','data.uid!==uid',
+                                'data.readings.every(valid)','RANKS.promotion(player.xp)',
+                                'RANKS.nearby(player.xp,6)','rank-transition-tag'])
+            assert.ok(js.includes(marker),'missing feature '+marker);
+          assert.ok(css.includes('env(safe-area-inset-top'));
+          assert.ok(css.includes('.source-details'));
+          assert.ok(sw.includes('/progression.js'));
+          assert.ok(sw.includes('rankcommand-static-v11'));
+          console.log('PASS: all seven ranks, GM checkpoints, original artwork, UID safety, backup controls, responsive styling');
           NODE
