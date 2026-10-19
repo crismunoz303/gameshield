@@ -1,19 +1,29 @@
-# CODM Rank Tracker v0.3.0 — Tactical UI edition
+# CODM Rank Tracker v0.4.0 — Unified player intelligence
 
-Native read-only COD Mobile iPhone rank companion. Built on branch \`codm-rank-tracker\` of crismunoz303/gameshield, with the GameShield main branch untouched.
+Native, read-only CODM iPhone companion built on the isolated `codm-rank-tracker` branch of `crismunoz303/gameshield`. GameShield main branch remains untouched.
 
-## New in v0.3.0
-- Military-inspired operations header, animated gold segmented rank progress, and layered tactical panels.
-- Displays an authentic rank emblem **only when** the unofficial API supplies a codashop.com HTTPS image; fallback uses a custom shield.
-- Expanded rank promotion route with checkpoints; redesigned color-coded XP performance dashboard.
-- Preserves v0.2.0 UX: XP analytics, history, calculator, local cached changes and optional on-open refresh.
-- Same bundle identifier and saved data keys so installs over v0.2.0 are intended to preserve locally stored progress.
+## One app, four dashboards
+1. **Command** — live profile, multiplayer rank/rating, animated progress, current division, the next rank, 6 XP snapshot cards, tier route, Legendary win-scenario calculator.
+2. **Player** — nickname, player UID, player level, avatar art (trusted HTTPS CDN only), player level art, short ID, country name/code, country ID, internal MP rank class, rank emblem, current XP; last synced time and clearly labeled data source.
+3. **Analytics** — time-filtered XP graph, biggest recorded gain/drop, first and latest recording, all-time net XP, daily and weekly tracked changes, counts and averages of recorded XP changes.
+4. **History** — locally stored changed readings, timestamps/ranks/XP deltas and sharing complete history as CSV *text*.
 
-## Limitations
-- Rank/XP and returned icon are from a reverse-engineered, unofficial third-party service. Functionality and permission for ongoing access are not guaranteed.
-- App has no accurate match-by-match kills, wins, losses, KD or exact XP per match, and does not claim it does.
-- No password or game traffic modification; only the opted-in UID and the device IP are shared with the third-party provider for lookups. The rank icon is fetched from the provider's official-looking codashop.com CDN URL when provided.
-- IPA built by GitHub Actions is unsigned and requires signing before installation. Compilation and IPA integrity do not prove installed-device behavior or service authorization.
+## Available API fields (verified in upstream source)
+`success`, `nickname`, `pic`, `countryCode`, `countryId`, `shortId`, `level.current`, `level.image`, `rank.class`, `rank.multiplayerRank`, `rank.image`, `rank.rating`. The API also supplies a `dailyGift` URL, deliberately not called because claiming a gift changes state.
 
-## Building
-GitHub Actions workflow CODM Rank Tracker - unsigned IPA runs Xcode on a macOS runner with \`CODE_SIGNING_ALLOWED=NO\`, assembles the IPA payload and validates ZIP integrity.
+The API does **not** provide actual CODM match history, per-match XP, wins, losses, K/D, BR rank, weapon unlocks/inventory, or leaderboard placement. The app never fabricates these.
+
+## Privacy, compatibility and limits
+- Opt-in UID lookup to unofficial `callofdutymobile.vercel.app`; provider sees UID and IP address. No passwords or private account cookies.
+- Activision terms restrict unauthorized data collection; the unofficial provider's uptime, accuracy and permission for automated access are unverified.
+- No background polling or game modification. Lookup on app foreground/open or manual refresh; cached data remains usable if the service fails.
+- Rank XP changes are *between saved readings* and may span multiple matches.
+- Keeps the existing bundle ID and the same `codm.player.<uid>` and `codm.history.<uid>` keys to preserve 0.3.0 saved state. New player metadata fields are optional to decode existing cached records.
+- Local history capped at 1000 changed readings. CSV is shared as text, not a downloaded file.
+- Only image URLs from a known codashop.com HTTPS CDN domain are remotely loaded.
+- IPA artifacts are unsigned; use your usual iOS signing tool. CI verifies compile and ZIP structure but not iPhone installation.
+
+## Build
+GitHub Actions `CODM Rank Tracker - unsigned IPA` uses `macos-15`, `xcodegen`, `xcodebuild -sdk iphoneos CODE_SIGNING_ALLOWED=NO`, and ZIP integrity validation.
+
+Source: `codm-rank-tracker/CODMRank.swift`. 
