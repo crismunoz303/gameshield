@@ -91,9 +91,15 @@
         <section class="card">
           <div class="section-label"><b>01 / OPERATOR FILE</b><small>Identity returned by the live provider</small></div>
           <div class="profile-hero">
-          <div class="profile-avatar-wrap"><span class="tag">OPERATOR // 01</span><div class="avatar"><img id="avatar" alt="Player avatar" hidden><span id="avatarFallback">◈</span></div></div>
+          <div class="profile-avatar-wrap"><span class="tag">OPERATOR // 01</span><div class="avatar"><img id="avatar" alt="COD Mobile player avatar" referrerpolicy="no-referrer" draggable="false" hidden><span id="avatarFallback" class="avatar-fallback" aria-label="No profile avatar available">NO<br>AVATAR</span></div></div>
           <div class="profile-identity"><small>ACTIVE PLAYER</small><h2 id="profileName">—</h2><span id="profileRank">—</span><p id="profileLevel">LEVEL —</p></div>
           <div class="profile-rank-art"><span>MP DIVISION</span><img id="profileRankArt" alt="Original COD Mobile rank badge" hidden><span id="profileRankFallback">—</span></div>
+          </div>
+          <div class="avatar-actions">
+            <div><strong>PLAYER AVATAR</strong><small id="avatarSource">Checking provider artwork…</small></div>
+            <button type="button" class="secondary" id="chooseAvatarBtn">SET AVATAR</button>
+            <button type="button" class="avatar-clear" id="clearAvatarBtn" hidden>REMOVE</button>
+            <input type="file" id="avatarFile" accept="image/png,image/jpeg,image/webp" hidden>
           </div>
           <div class="operator-quick"><div><small>LIVE RANKED RATING</small><strong id="profileXP">—</strong></div><div><small>NEXT XP CHECKPOINT</small><strong id="profileNext">—</strong></div></div>
           <button class="secondary full" id="copyUID">⎘ COPY PLAYER UID</button>
