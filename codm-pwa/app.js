@@ -406,6 +406,7 @@ rankButton.addEventListener("click",()=>{
 
 const navigationDock=document.querySelector(".tabs");
 let previousDockY=window.scrollY||0;
+let accumulatedDockTravel=0;
 let dockPending=false;
 function showNavigationDock(){
   navigationDock.classList.remove("dock-retracted");
@@ -418,11 +419,16 @@ window.addEventListener("scroll",()=>{
     dockPending=false;
     const y=Math.max(0,window.scrollY||document.documentElement.scrollTop||0);
     const delta=y-previousDockY;
-    if(y<110||delta< -9){
+    if(Math.abs(delta)>80||Math.sign(delta)!==Math.sign(accumulatedDockTravel))
+      accumulatedDockTravel=delta;
+    else accumulatedDockTravel+=delta;
+    if(y<110||accumulatedDockTravel< -18){
       showNavigationDock();
-    }else if(y>180&&delta>9){
+      accumulatedDockTravel=0;
+    }else if(y>180&&accumulatedDockTravel>28){
       navigationDock.classList.add("dock-retracted");
       navigationDock.inert=true;
+      accumulatedDockTravel=0;
     }
     previousDockY=y;
   });
