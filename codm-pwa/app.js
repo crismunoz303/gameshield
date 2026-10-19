@@ -141,6 +141,7 @@ function showTab(tab){
     requestAnimationFrame(()=>window.scrollTo(0,0));
   }
   if(tab==="analytics")requestAnimationFrame(drawChart);
+  if(tab==="meta")renderMeta();
 }
 function deltaAt(i){return i>0?readings[i].xp-readings[i-1].xp:null}
 function netWithin(ms){
@@ -502,6 +503,70 @@ window.addEventListener("scroll",()=>{
     previousDockY=y;
   });
 },{passive:true});
+
+// Gunsmith information is editorial, NOT read from the player's CODM account.
+// Never present a time-to-kill value unless it has been independently measured
+// for the exact attachment set and version: current dataset intentionally has none.
+const META=window.RankMeta;
+let metaFilter="ALL",metaActiveId="grav";
+function renderMeta(){
+  if(!META)return;
+  safeText("metaSeason",META.season.label);
+  const root=$("metaWeapons");root.replaceChildren();
+  const builds=META.entries.filter(x=>metaFilter==="ALL"||x.class===metaFilter);
+  if(!builds.length)return;
+  if(!builds.some(x=>x.id===metaActiveId))metaActiveId=builds[0].id;
+  builds.forEach(x=>{
+    const item=document.createElement("button");item.type="button";
+    item.className="meta-weapon"+(x.id===metaActiveId?" selected":"");
+    item.setAttribute("aria-pressed",x.id===metaActiveId?"true":"false");
+    const left=document.createElement("span");left.className="meta-weapon-class";left.textContent=x.class;
+    const info=document.createElement("span");info.className="meta-weapon-info";
+    const title=document.createElement("strong");title.textContent=x.name;
+    const role=document.createElement("small");role.textContent=x.role;
+    info.append(title,role);
+    const arrow=document.createElement("span");arrow.className="meta-weapon-arrow";arrow.textContent="↗";
+    item.append(left,info,arrow);
+    item.addEventListener("click",()=>{metaActiveId=x.id;renderMeta()});
+    root.append(item);
+  });
+  const build=builds.find(x=>x.id===metaActiveId);
+  safeText("metaWeaponClass",build.class+" // "+build.style.toUpperCase());
+  safeText("metaWeaponName",build.name);
+  safeText("metaWeaponRole",build.role);
+  safeText("metaTTK",build.ttk==null?"NOT VERIFIED":build.ttk+" ms");
+  safeText("metaNotes",build.notes);
+  safeText("metaSourceText",build.source+" · "+build.kind);
+  safeText("metaSourceDate","PUBLISHED "+build.published+" / REVIEWED "+META.season.reviewed);
+  $("metaSourceLink").href=build.url;
+  const attachments=$("metaAttachments");attachments.replaceChildren();
+  build.attachments.forEach((part,index)=>{
+    const row=document.createElement("div");row.className="meta-attachment";
+    const num=document.createElement("b");num.textContent=String(index+1).padStart(2,"0");
+    const slot=document.createElement("span");slot.textContent=part.slot.toUpperCase();
+    const name=document.createElement("strong");name.textContent=part.name;
+    row.append(num,slot,name);attachments.append(row);
+  });
+  document.querySelectorAll("[data-meta-filter]").forEach(button=>{
+    const selected=button.dataset.metaFilter===metaFilter;
+    button.classList.toggle("selected",selected);
+    button.setAttribute("aria-pressed",selected?"true":"false");
+  });
+}
+document.querySelectorAll("[data-meta-filter]").forEach(button=>{
+  button.addEventListener("click",()=>{metaFilter=button.dataset.metaFilter;renderMeta()});
+});
+$("metaCopy").addEventListener("click",async()=>{
+  const b=META.entries.find(x=>x.id===metaActiveId);
+  if(!b)return;
+  const output=b.name+" · CODM Gunsmith\n"+
+    b.attachments.map(a=>a.slot+": "+a.name).join("\n")+
+    "\nSource: "+b.url+
+    "\nTTK: not independently verified for this build."+
+    "\nRecommendation reviewed "+META.season.reviewed;
+  try{await navigator.clipboard.writeText(output);note("Gunsmith attachments copied.")}
+  catch{note("Copy unavailable in this browser.")}
+});
 
 document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
 document.querySelectorAll("[data-range]").forEach(b=>b.addEventListener("click",()=>{
