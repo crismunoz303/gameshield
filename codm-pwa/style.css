@@ -445,3 +445,17 @@ body:after{
   .profile-hero{margin-top:5px}
   #app{padding-bottom:calc(176px + env(safe-area-inset-bottom))}
 }
+
+/* iOS viewport and dock refinement */
+@supports (-webkit-touch-callout: none){
+ #app{padding-top:max(76px,calc(env(safe-area-inset-top,0px) + 24px))}
+ body:after{height:max(57px,calc(env(safe-area-inset-top,0px) + 8px));background:#090d10}
+}
+.tabs{transition:transform .22s ease,opacity .18s ease}
+.tabs.dock-retracted{transform:translate(-50%,calc(100% + 120px));opacity:0;pointer-events:none}
+@media(max-width:440px){
+ .screen-intro{padding-top:9px}
+ .screen-intro h1{font-size:clamp(49px,13.4vw,66px);line-height:.88}
+ #app{padding-bottom:calc(176px + env(safe-area-inset-bottom))}
+}
+@media(prefers-reduced-motion:reduce){.tabs{transition:none}}
