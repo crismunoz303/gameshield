@@ -156,19 +156,10 @@ function todayNet(){
 }
 function render(){
   if(!player)return;
-  const remaining=Math.max(0,LEGENDARY-player.xp);
-  const promotion=RANKS.promotion(player.xp);
-  safeText("rankLabel",player.rank); // Trust actual account rank over inferred divisions.
+  safeText("rankLabel",player.rank); // Provider's actual account rank, not an inferred division.
   safeText("playerName",player.nickname);
   safeText("levelBadge","LEVEL "+(player.level??"—"));
   safeText("currentXP",fmt(player.xp));
-  safeText("percent",Math.round(RANKS.progress(player.xp))+"% OF 2023 GUIDE BENCHMARK");
-  safeText("xpRemaining",promotion.complete?"2023 GUIDE BENCHMARK REACHED":fmt(remaining)+" XP TO 2023 GUIDE BENCHMARK");
-  $("progressBar").style.width=RANKS.progress(player.xp)+"%";
-  document.querySelector(".track").setAttribute("aria-valuenow",String(Math.min(LEGENDARY,player.xp)));
-  safeText("nextTier",promotion.complete?"LEGENDARY REFERENCE":promotion.label);
-  safeText("nextXP",promotion.complete?"✓":fmt(promotion.remaining)+" XP");
-  safeText("checkpointNote","Historical guide only · current threshold not verified");
   safeText("liveBadge","LAST READING");
   safeText("lastCheck",new Date(player.checkedAt).toLocaleString(undefined,{hour:"numeric",minute:"2-digit"}));
   displayArt("rankArt","badgeUnavailable",player.rankArt);
@@ -180,43 +171,9 @@ function render(){
   safeText("mToday",signed(todayNet()));
   safeText("mWeek",signed(netWithin(7*86400000)));
   safeText("mBest",readings.length?fmt(Math.max(...readings.map(x=>x.xp))):"—");
-  renderMilestones();renderPlanner();renderPlayer();renderAnalytics();renderHistory();
+  renderPlayer();renderAnalytics();renderHistory();
 }
 
-function renderMilestones(){
-  const root=$("milestones");root.replaceChildren();
-  const upcoming=RANKS.next(player.xp);
-  const marks=RANKS.nearby(player.xp,6);
-  const band=RANKS.currentBand(player.xp);
-  safeText("promotionContext","2023 GUIDE / "+band.name);
-  safeText("milestoneNote","Published in 2023, not verified for current season. Your actual rank comes from the player provider.");
-  marks.forEach(({label,at})=>{
-    const passed=player.xp>=at;
-    const isNext=upcoming?.at===at;
-    const el=document.createElement("button");el.type="button";
-    el.className="milestone"+(passed?" done":isNext?" next":"");
-    el.setAttribute("aria-label",label+": "+fmt(at)+" XP (2023 guide)");
-    const icon=document.createElement("div");icon.className="badge";icon.textContent=passed?"✓":isNext?"↗":"·";
-    const name=document.createElement("b");name.textContent=label;
-    const point=document.createElement("small");point.textContent=fmt(at)+" XP (2023)";
-    el.append(icon,name,point);
-    el.addEventListener("click",()=>{
-      root.querySelectorAll(".milestone").forEach(node=>node.classList.remove("selected"));
-      el.classList.add("selected");
-      note(passed?label+" checkpoint passed":label+": "+fmt(at-player.xp)+" XP to 2023 guide checkpoint (not current season verified)");
-    });
-    root.append(el);
-  });
-}
-function renderPlanner(){
-  safeText("assumedGain","+"+chosenGain);
-  safeText("winsEstimate",fmt(Math.ceil(Math.max(0,LEGENDARY-player.xp)/chosenGain)));
-  const root=$("gainChoices");root.replaceChildren();
-  [30,40,50,60,70].forEach(gain=>{
-    const b=document.createElement("button");b.textContent="+"+gain;b.className=chosenGain===gain?"selected":"";
-    b.onclick=()=>{chosenGain=gain;renderPlanner()};root.append(b);
-  });
-}
 function row(label,value){
   const el=document.createElement("div");el.className="data-row";
   const n=document.createElement("span");n.textContent=label;
@@ -289,8 +246,7 @@ function renderPlayer(){
   safeText("profileName",player.nickname);safeText("profileRank",player.rank);
   safeText("profileLevel","LEVEL "+(player.level??"—"));
   safeText("profileXP",fmt(player.xp));
-  const checkpoint=RANKS.promotion(player.xp);
-  safeText("profileNext",checkpoint.complete?"2023 GUIDE REACHED":checkpoint.label);
+  safeText("profileNext",player.rank);
   displayPlayerAvatar();
   displayArt("profileRankArt","profileRankFallback",player.rankArt);
   displayArt("levelArt","levelArtFallback",player.levelArt);
@@ -521,7 +477,7 @@ function renderBlueprints(){
   const list=$("blueprintList");list.replaceChildren();
   const q=blueprintQuery.trim().toLowerCase();
   const matches=BLUEPRINTS.filter(x=>
-    (blueprintFilter==="ALL"||(blueprintFilter==="UNKNOWN"?x.rarity===null:x.rarity===blueprintFilter))&&
+    (blueprintFilter==="ALL"||x.rarity===blueprintFilter)&&
     (!q||(x.weapon+" "+x.blueprint+" "+x.season).toLowerCase().includes(q))
   );
   safeText("blueprintCount",matches.length+" OFFICIAL ANNOUNCEMENTS MATCH");
@@ -540,11 +496,13 @@ function renderBlueprints(){
     const b=document.createElement("button");b.type="button";
     b.className="blueprint-card"+(entry.id===blueprintActiveId?" selected":"");
     b.setAttribute("aria-pressed",String(entry.id===blueprintActiveId));
-    const rarity=document.createElement("span");rarity.className="blueprint-tier";rarity.textContent=entry.rarity??"RARITY NOT STATED";
+    const rarity=document.createElement("span");rarity.className="blueprint-tier";
+    if(entry.rarity)rarity.textContent=entry.rarity;
     const weapon=document.createElement("strong");weapon.textContent=entry.weapon;
     const title=document.createElement("b");title.textContent=entry.blueprint;
     const season=document.createElement("small");season.textContent=entry.season+" / OFFICIAL";
-    b.append(rarity,weapon,title,season);
+    if(entry.rarity)b.append(rarity);
+    b.append(weapon,title,season);
     b.addEventListener("click",()=>{blueprintActiveId=entry.id;renderBlueprints()});
     list.append(b);
   });
@@ -552,7 +510,8 @@ function renderBlueprints(){
   $("blueprintDetail").hidden=false;
   safeText("blueprintTitle",selected.weapon+" — "+selected.blueprint);
   safeText("blueprintSeason",selected.season+" / VERIFIED ANNOUNCEMENT");
-  safeText("blueprintRarity",selected.rarity??"RARITY NOT STATED BY SOURCE");
+  $("blueprintRarity").hidden=!selected.rarity;
+  if(selected.rarity)safeText("blueprintRarity",selected.rarity);
   safeText("blueprintRelease",selected.release);
   $("blueprintSource").href=selected.sourceUrl;
 }
@@ -593,10 +552,9 @@ function renderMeta(){
   safeText("metaWeaponClass",build.class+" // "+build.style.toUpperCase());
   safeText("metaWeaponName",build.name);
   safeText("metaWeaponRole",build.role);
-  safeText("metaTTK",build.ttk==null?"NOT VERIFIED":build.ttk+" ms");
   safeText("metaNotes",build.notes);
   safeText("metaSourceText",build.source+" · "+build.kind);
-  safeText("metaSourceDate","SOURCE DATE "+build.published+" / CATALOG REVIEW "+META.season.reviewed);
+  safeText("metaSourceDate","SOURCE: "+build.url.replace(/^https:\/\//,"").split("/")[0]);
   $("metaSourceLink").href=build.url;
   const attachments=$("metaAttachments");attachments.replaceChildren();
   build.attachments.forEach((part,index)=>{
@@ -620,9 +578,7 @@ $("metaCopy").addEventListener("click",async()=>{
   if(!b)return;
   const output=b.name+" · CODM Gunsmith\n"+
     b.attachments.map(a=>a.slot+": "+a.name).join("\n")+
-    "\nSource: "+b.url+
-    "\nTTK: not independently verified for this build."+
-    "\nRecommendation reviewed "+META.season.reviewed;
+    "\nSource: "+b.url;
   try{await navigator.clipboard.writeText(output);note("Gunsmith attachments copied.")}
   catch{note("Copy unavailable in this browser.")}
 });
