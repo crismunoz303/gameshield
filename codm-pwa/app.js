@@ -57,27 +57,25 @@ function normalPlayer(raw){
 function allowedArt(raw){
   try{const url=new URL(raw);const h=url.hostname.toLowerCase();return url.protocol==="https:"&&(h==="codashop.com"||h.endsWith(".codashop.com"))?url.href:null}catch{return null}
 }
-function displayArt(id, fallbackId,url){
-  const el=$(id), fallback=$(fallbackId); const safe=allowedArt(url);
-  el.hidden=true; fallback.hidden=false;
-  if(safe){
-    el.onload=()=>{
-      if(el.src!==safe)return;
-      // The unofficial service sometimes provides a small bitmap. Avoid enlarging
-      // it more than needed; visual glow is drawn separately, not blurred into art.
-      if(id==="rankArt"){
-        const size=el.naturalWidth;
-        el.style.width=size && size<144 ? Math.max(74,Math.min(102,Math.round(size*.88)))+"px" : "";
-        el.style.height="auto";
-      }
-      el.hidden=false;fallback.hidden=true;
-    };
-    el.onerror=()=>{el.hidden=true;fallback.hidden=false};
-    el.src=safe;
-  } else {
-    el.removeAttribute("src");
-    if(id==="rankArt"){el.style.width="";el.style.height=""}
-  }
+function displayArt(id,fallbackId,url){
+  const el=$(id),fallback=$(fallbackId),safe=allowedArt(url);
+  el.hidden=true;fallback.hidden=false;el.removeAttribute("src");
+  if(!safe)return;
+  el.onload=()=>{
+    if(el.src!==safe)return;
+    if(id==="rankArt"){
+      // Only show authentic rank imagery and never blow a thumbnail up.
+      const width=el.naturalWidth||0,height=el.naturalHeight||0;
+      if(!width||!height){el.hidden=true;fallback.hidden=false;return}
+      const maxWidth=108,maxHeight=114;
+      const scale=Math.min(1,maxWidth/width,maxHeight/height);
+      el.style.width=Math.floor(width*scale)+"px";
+      el.style.height=Math.floor(height*scale)+"px";
+    }
+    el.hidden=false;fallback.hidden=true;
+  };
+  el.onerror=()=>{el.hidden=true;fallback.hidden=false};
+  el.src=safe;
 }
 async function refresh(force=false){
   if(refreshing||!uid)return;
@@ -151,36 +149,26 @@ function render(){
   safeText("nextXP",next?fmt(next[1]-player.xp)+" XP":"✓");
   safeText("liveBadge","LAST READING");
   safeText("lastCheck",new Date(player.checkedAt).toLocaleString(undefined,{hour:"numeric",minute:"2-digit"}));
-  renderRankVector();
+  displayArt("rankArt","badgeUnavailable",player.rankArt);
+  const glowForRank = (rank) => {
+    const s=String(rank||"").toLowerCase().replace(/[\s_-]+/g," ");
+    if(s.includes("legendary"))return "#ff8d49";
+    if(s.includes("grand master"))return "#ffca55";
+    if(s.includes("master"))return "#bd9eff";
+    if(s.includes("pro"))return "#85b4ff";
+    if(s.includes("elite"))return "#65dbec";
+    if(s.includes("veteran"))return "#bbc7d1";
+    if(s.includes("rookie"))return "#e5b587";
+    return "#d8b669";
+  };
+  $("interactiveRank").style.setProperty("--rank-glow",glowForRank(player.rank));
+  $("interactiveRank").setAttribute("aria-label","Original "+player.rank+" COD Mobile badge; tap to toggle glow");
   const last=readings.length>1?deltaAt(readings.length-1):null;
   safeText("mDelta",signed(last));
   safeText("mToday",signed(todayNet()));
   safeText("mWeek",signed(netWithin(7*86400000)));
   safeText("mBest",readings.length?fmt(Math.max(...readings.map(x=>x.xp))):"—");
   renderMilestones();renderPlanner();renderPlayer();renderAnalytics();renderHistory();
-}
-
-function renderRankVector(){
-  const tier=window.RankArt?.resolve(player?.rank);
-  const svg=window.RankArt?.render(player?.rank)||"";
-  const out=$("rankVector");
-  out.innerHTML=svg; // Constructed only from fixed local SVG paths and sanitized rank mapping.
-  const glow=tier?.glow||"#9eb1c4";
-  $("interactiveRank").style.setProperty("--rank-glow",glow);
-  $("interactiveRank").setAttribute("aria-label",(tier?.label||"Unknown")+" rank — touch to charge the HD companion emblem");
-}
-function renderRankGallery(){
-  const root=$("rankGallery");
-  if(!root||root.dataset.ready==="true"||!window.RankArt)return;
-  root.dataset.ready="true";
-  window.RankArt.tiers.forEach(tier=>{
-    const item=document.createElement("div");item.className="rank-gallery-item";
-    item.style.setProperty("--gallery-glow",tier.glow);
-    const art=document.createElement("div");art.className="rank-gallery-badge";
-    art.innerHTML=window.RankArt.render(tier.label);
-    const label=document.createElement("strong");label.textContent=tier.label.toUpperCase();
-    item.append(art,label);root.append(item);
-  });
 }
 
 function renderMilestones(){
@@ -225,8 +213,6 @@ function countryName(code){
 function renderPlayer(){
   safeText("profileName",player.nickname);safeText("profileRank",player.rank);
   safeText("profileLevel","LEVEL "+(player.level??"—"));
-  displayArt("originalRankArt","originalArtFallback",player.rankArt);
-  renderRankGallery();
   displayArt("avatar","avatarFallback",player.pic);
   displayArt("levelArt","levelArtFallback",player.levelArt);
   const el=$("identityRows");el.replaceChildren();
