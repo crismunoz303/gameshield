@@ -61,10 +61,23 @@ function displayArt(id, fallbackId,url){
   const el=$(id), fallback=$(fallbackId); const safe=allowedArt(url);
   el.hidden=true; fallback.hidden=false;
   if(safe){
-    el.onload=()=>{if(el.src===safe){el.hidden=false;fallback.hidden=true}};
+    el.onload=()=>{
+      if(el.src!==safe)return;
+      // The unofficial service sometimes provides a small bitmap. Avoid enlarging
+      // it more than needed; visual glow is drawn separately, not blurred into art.
+      if(id==="rankArt"){
+        const size=el.naturalWidth;
+        el.style.width=size && size<144 ? Math.max(74,Math.min(102,Math.round(size*.88)))+"px" : "";
+        el.style.height="auto";
+      }
+      el.hidden=false;fallback.hidden=true;
+    };
     el.onerror=()=>{el.hidden=true;fallback.hidden=false};
     el.src=safe;
-  } else {el.removeAttribute("src")}
+  } else {
+    el.removeAttribute("src");
+    if(id==="rankArt"){el.style.width="";el.style.height=""}
+  }
 }
 async function refresh(force=false){
   if(refreshing||!uid)return;
@@ -150,12 +163,19 @@ function renderMilestones(){
   const root=$("milestones");root.replaceChildren();
   const first=MILESTONES.find(x=>player.xp<x[1]);
   MILESTONES.forEach(([title,threshold])=>{
-    const el=document.createElement("div");
+    const el=document.createElement("button");el.type="button";
     el.className="milestone"+(player.xp>=threshold?" done":first?.[1]===threshold?" next":"");
+    el.setAttribute("aria-label",title+" milestone: "+fmt(threshold)+" rank XP. Tap for progress.");
     const icon=document.createElement("div");icon.className="badge";icon.textContent=player.xp>=threshold?"✓":title==="LEGEND"?"♛":"✦";
     const label=document.createElement("b");label.textContent=title;
     const number=document.createElement("small");number.textContent=fmt(threshold);
-    el.append(icon,label,number);root.append(el);
+    el.append(icon,label,number);
+    el.addEventListener("click",()=>{
+      root.querySelectorAll(".milestone").forEach(item=>item.classList.remove("selected"));
+      el.classList.add("selected");
+      note(player.xp>=threshold ? title+" achieved!" : title+": "+fmt(threshold-player.xp)+" XP remaining.");
+    });
+    root.append(el);
   });
 }
 function renderPlanner(){
@@ -261,6 +281,36 @@ function exportHistory(){
   setTimeout(()=>URL.revokeObjectURL(url),1500);
   note("History CSV is ready to save or share.");
 }
+// Interactive game-inspired rank glow: tapping charges it; pointer movement steers
+// the lighting only. The rank image stays static for maximum source sharpness.
+const rankButton=$("interactiveRank");
+const reducedMotion=window.matchMedia("(prefers-reduced-motion: reduce)");
+function resetRankLight(){
+  rankButton.style.setProperty("--orbit-x","0deg");
+  rankButton.style.setProperty("--orbit-y","0deg");
+  rankButton.style.setProperty("--light-x","50%");
+  rankButton.style.setProperty("--light-y","45%");
+}
+rankButton.addEventListener("pointermove",event=>{
+  if(reducedMotion.matches)return;
+  const rect=rankButton.getBoundingClientRect();
+  const x=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));
+  const y=Math.max(0,Math.min(1,(event.clientY-rect.top)/rect.height));
+  rankButton.style.setProperty("--orbit-x",((x-.5)*18).toFixed(1)+"deg");
+  rankButton.style.setProperty("--orbit-y",((.5-y)*15).toFixed(1)+"deg");
+  rankButton.style.setProperty("--light-x",Math.round(x*100)+"%");
+  rankButton.style.setProperty("--light-y",Math.round(y*100)+"%");
+});
+rankButton.addEventListener("pointerleave",resetRankLight);
+rankButton.addEventListener("pointercancel",resetRankLight);
+rankButton.addEventListener("pointerup",resetRankLight);
+rankButton.addEventListener("click",()=>{
+  const charged=rankButton.classList.toggle("charged");
+  rankButton.setAttribute("aria-pressed",charged?"true":"false");
+  rankButton.setAttribute("aria-label",charged?"Turn off rank emblem glow":"Activate rank emblem glow");
+  safeText("chargeHint",charged?"✦ GLOW CHARGED · TAP TO DIM":"✧ TAP EMBLEM TO CHARGE");
+});
+
 document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
 document.querySelectorAll("[data-range]").forEach(b=>b.addEventListener("click",()=>{
   range=b.dataset.range;document.querySelectorAll("[data-range]").forEach(x=>x.classList.toggle("selected",x===b));drawChart()
