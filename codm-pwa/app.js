@@ -116,12 +116,18 @@ function connect(newUID){
 function showTab(tab){
   const changed=currentTab!==tab;
   currentTab=tab;
+  showNavigationDock();
   document.querySelectorAll("[data-tab]").forEach(b=>{
     const on=b.dataset.tab===tab;b.classList.toggle("active",on);
     b.setAttribute("aria-current",on?"page":"false");
   });
   document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("active",p.id==="pane-"+tab));
-  if(changed)window.scrollTo({top:0,behavior:"auto"});
+  if(changed){
+    window.scrollTo(0,0);
+    document.documentElement.scrollTop=0;
+    document.body.scrollTop=0;
+    requestAnimationFrame(()=>window.scrollTo(0,0));
+  }
   if(tab==="analytics")requestAnimationFrame(drawChart);
 }
 function deltaAt(i){return i>0?readings[i].xp-readings[i-1].xp:null}
