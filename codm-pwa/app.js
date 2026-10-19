@@ -633,7 +633,11 @@ $("metaCopy").addEventListener("click",async()=>{
 document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.go)));
 $("viewHistoryBtn").addEventListener("click",()=>showTab("history"));
 $("backToStatsBtn").addEventListener("click",()=>showTab("analytics"));
-document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{
+  if(b.dataset.tab==="meta")metaDetailOpen=false;
+  if(b.dataset.tab==="blueprints")blueprintDetailOpen=false;
+  showTab(b.dataset.tab);
+}));
 document.querySelectorAll("[data-range]").forEach(b=>b.addEventListener("click",()=>{
   range=b.dataset.range;document.querySelectorAll("[data-range]").forEach(x=>x.classList.toggle("selected",x===b));drawChart()
 }));
@@ -676,7 +680,11 @@ if(validUID(previous)&&accepted===previous){
   $("connectPanel").hidden=true;$("dashboard").hidden=false;
   $("homePlayerData").hidden=!player;
   if(player)render();
-  else document.body.classList.add("guest");
+  else {
+    document.body.classList.add("guest");
+    $("connectPanel").hidden=false;
+    $("uidInput").value=uid;
+  }
   renderHomeDiscover();
   setStatus("Showing saved readings · checking live status");
   refresh(false);
