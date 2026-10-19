@@ -79,6 +79,7 @@ function displayArt(id,fallbackId,url){
       el.style.height=Math.floor(height*scale)+"px";
     }
     el.hidden=false;fallback.hidden=true;
+    if(id==="avatar")safeText("avatarSource","Profile image returned by the player provider");
   };
   el.onerror=()=>{
     el.hidden=true;fallback.hidden=false;
