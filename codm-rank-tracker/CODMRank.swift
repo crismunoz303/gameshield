@@ -1,7 +1,7 @@
 import SwiftUI
 import Charts
 
-// CODM Rank Tracker v0.4.0 — rank and XP are read-only, sourced from an unofficial service.
+// CODM Rank Tracker v0.5.0 — lookup data read-only; match highlights are entered locally.
 private enum Theme {
     static let ink = Color(red: 0.032, green: 0.041, blue: 0.066)
     static let card = Color(red: 0.090, green: 0.114, blue: 0.158)
@@ -59,6 +59,14 @@ private struct Point: Codable, Identifiable {
     let xp: Int
     let rank: String
 }
+private struct SavedMatch: Codable, Identifiable {
+    let id: UUID
+    let gain: Int?
+    let mode: String
+    let date: Date?
+    let note: String
+}
+
 private struct Change: Identifiable {
     let id: UUID
     let date: Date
@@ -84,6 +92,7 @@ private let rankTiers: [Tier] = [
 private final class RankStore: ObservableObject {
     @Published var player: Player?
     @Published var points: [Point] = []
+    @Published var matches: [SavedMatch] = []
     @Published var loading = false
     @Published var errorText: String?
     private var activeUID = ""
@@ -98,6 +107,35 @@ private final class RankStore: ObservableObject {
         points = prefs.data(forKey: "codm.history.\(uid)").flatMap {
             try? JSONDecoder().decode([Point].self, from: $0)
         } ?? []
+        matches = prefs.data(forKey: "codm.matches.\(uid)").flatMap {
+            try? JSONDecoder().decode([SavedMatch].self, from: $0)
+        } ?? []
+    }
+
+    var bestMatch: SavedMatch? {
+        matches.filter { $0.gain != nil }.max { ($0.gain ?? 0) < ($1.gain ?? 0) } ?? matches.last
+    }
+    var biggestObservedGain: Change? {
+        changes.filter { $0.difference > 0 }.max { $0.difference < $1.difference }
+    }
+    func saveMatch(gain: Int?, mode: String, date: Date?, note: String) -> Bool {
+        guard !activeUID.isEmpty else { return false }
+        if let gain = gain, !(1...99999).contains(gain) { return false }
+        let cleanNote = String(note.trimmingCharacters(in: .whitespacesAndNewlines).prefix(120))
+        guard gain != nil || !mode.isEmpty || date != nil || !cleanNote.isEmpty else { return false }
+        matches.append(SavedMatch(id: UUID(), gain: gain, mode: mode, date: date, note: cleanNote))
+        if matches.count > 100 { matches.removeFirst(matches.count - 100) }
+        saveMatches()
+        return true
+    }
+    func deleteMatch(_ id: UUID) {
+        matches.removeAll { $0.id == id }
+        saveMatches()
+    }
+    private func saveMatches() {
+        if let bytes = try? JSONEncoder().encode(matches) {
+            UserDefaults.standard.set(bytes, forKey: "codm.matches.\(activeUID)")
+        }
     }
 
     func refresh(uid: String) async {
@@ -239,6 +277,13 @@ private struct Dashboard: View {
     @State private var period: HistoryPeriod = .all
     @State private var projectedXP = 50
     @State private var selectedPage: IntelPage = .command
+    @State private var matchFormShown = false
+    @State private var matchGainText = ""
+    @State private var matchMode = ""
+    @State private var matchNote = ""
+    @State private var matchHasDate = false
+    @State private var matchDate = Date()
+    @State private var matchInputError = false
 
     private let legendary = 8001
     private var connected: Bool { consent && RankStore.validUID(uid) }
@@ -264,6 +309,7 @@ private struct Dashboard: View {
                             case .command:
                                 hero(player)
                                 overview
+                                bestGamePanel
                                 climb
                                 goalCalculator
                             case .identity:
@@ -271,6 +317,7 @@ private struct Dashboard: View {
                                 providerPanel(player)
                             case .analytics:
                                 trends
+                                bestGamePanel
                                 historySummary
                                 overview
                             case .archive:
@@ -311,6 +358,7 @@ private struct Dashboard: View {
                 Task { await store.refresh(uid: uid) }
             }
             .sheet(isPresented: $showSettings) { settings }
+            .sheet(isPresented: $matchFormShown) { matchEntryForm }
         }
     }
 
@@ -663,6 +711,133 @@ private struct Dashboard: View {
         .background(Theme.ink, in: RoundedRectangle(cornerRadius: 11))
     }
 
+    private var bestGamePanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle("BEST GAME SO FAR", subtitle: "Your personal ranked highlight")
+            if let match = store.bestMatch {
+                Text(match.gain.map { signed($0) + " RATING" } ?? "RATING UNKNOWN")
+                    .font(.system(size: 26, weight: .black, design: .rounded))
+                    .foregroundStyle(Theme.green)
+                Text(match.mode.isEmpty ? "Game mode not saved" : match.mode)
+                    .font(.subheadline)
+                if let date = match.date {
+                    Text(date.formatted(date: .abbreviated, time: .omitted))
+                        .font(.caption).foregroundStyle(Theme.secondary)
+                }
+                if !match.note.isEmpty {
+                    Text(match.note).font(.subheadline).foregroundStyle(Theme.secondary)
+                }
+            } else {
+                Text("Record a standout game even if you can't remember its rating gain.")
+                    .font(.subheadline).foregroundStyle(Theme.secondary)
+            }
+            Button {
+                matchGainText = ""
+                matchMode = ""
+                matchNote = ""
+                matchHasDate = false
+                matchInputError = false
+                matchFormShown = true
+            } label: {
+                Label("LOG A RANKED MATCH", systemImage: "plus.circle.fill")
+                    .font(.system(size: 12, weight: .heavy, design: .monospaced))
+                    .frame(maxWidth: .infinity)
+                    .padding(13)
+                    .foregroundStyle(Theme.ink)
+                    .background(Theme.yellow, in: RoundedRectangle(cornerRadius: 11))
+            }.buttonStyle(.plain)
+            Rectangle().fill(Theme.line).frame(height: 1)
+            sectionTitle("BIGGEST OBSERVED RATING JUMP", subtitle: "Difference between account lookups")
+            if let jump = store.biggestObservedGain {
+                Text(signed(jump.difference))
+                    .font(.system(size: 28, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Theme.green)
+                Text("Recorded " + jump.date.formatted(date: .abbreviated, time: .shortened)
+                     + ". May cover multiple games; not a verified single-match gain.")
+                    .font(.system(size: 10)).foregroundStyle(Theme.secondary)
+            } else {
+                Text("No positive rating difference recorded between account checks yet.")
+                    .font(.footnote).foregroundStyle(Theme.secondary)
+            }
+            if !store.matches.isEmpty {
+                Rectangle().fill(Theme.line).frame(height: 1)
+                sectionTitle("SAVED MATCHES", subtitle: "Locally recorded, per UID")
+                ForEach(Array(store.matches.suffix(8).reversed())) { match in
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(match.gain.map { signed($0) + " RATING" } ?? "RATING UNKNOWN")
+                                .font(.system(size: 12, weight: .heavy))
+                                .foregroundStyle(Theme.green)
+                            Text(match.mode.isEmpty ? "Mode not saved" : match.mode)
+                                .font(.caption).foregroundStyle(Theme.secondary)
+                            if !match.note.isEmpty { Text(match.note).font(.footnote) }
+                        }
+                        Spacer(minLength: 8)
+                        Button(role: .destructive) { store.deleteMatch(match.id) } label: {
+                            Image(systemName: "trash").foregroundStyle(Theme.red)
+                        }.accessibilityLabel("Delete this saved match")
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+            Text("Individual matches are manually entered. The provider doesn't expose game results.")
+                .font(.system(size: 10)).foregroundStyle(Theme.secondary)
+        }.card()
+    }
+
+    private var matchEntryForm: some View {
+        NavigationStack {
+            Form {
+                Section("RANKED MATCH") {
+                    TextField("Rating gain (optional)", text: $matchGainText).keyboardType(.numberPad)
+                    Picker("Game mode", selection: $matchMode) {
+                        Text("Not recorded").tag("")
+                        ForEach(["Search & Destroy", "Hardpoint", "Domination", "Team Deathmatch",
+                                 "Frontline", "Other Ranked MP"], id: \.self) { mode in
+                            Text(mode).tag(mode)
+                        }
+                    }
+                    Toggle("I remember the date", isOn: $matchHasDate)
+                    if matchHasDate {
+                        DatePicker("Played on", selection: $matchDate, in: ...Date(), displayedComponents: .date)
+                    }
+                    TextField("Notes (e.g. huge rank boost)", text: $matchNote, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+                Section {
+                    Text("If you don't know the points, leave the rating blank and record the game mode, date or note. No rating is estimated.")
+                        .font(.footnote)
+                }
+                if matchInputError {
+                    Text("Use a whole-number rating gain from 1–99,999, or leave it blank and add a note, mode or date.")
+                        .foregroundStyle(Theme.red)
+                }
+            }
+            .navigationTitle("Log Ranked Match")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { matchFormShown = false }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Save") {
+                        let clean = matchGainText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let gain = clean.isEmpty ? nil : Int(clean)
+                        guard clean.isEmpty || gain != nil else {
+                            matchInputError = true
+                            return
+                        }
+                        let saved = store.saveMatch(gain: gain, mode: matchMode,
+                                                    date: matchHasDate ? matchDate : nil,
+                                                    note: matchNote)
+                        matchInputError = !saved
+                        if saved { matchFormShown = false }
+                    }.fontWeight(.bold)
+                }
+            }
+        }
+        .presentationDetents([.large])
+    }
+
     private var historySummary: some View {
         VStack(alignment: .leading, spacing: 13) {
             sectionTitle("ALL-TIME RECORDS", subtitle: "Calculated from the readings saved on this iPhone")
@@ -1010,7 +1185,7 @@ private struct Dashboard: View {
                     Text("The service is unofficial and its availability and authorization are not guaranteed. It receives your UID and IP when you sync. No background polling or game modification.")
                     Link("Activision Terms", destination: URL(string: "https://www.activision.com/legal/terms-of-use")!)
                 }
-                Section("Version") { Text("CODM Rank Tracker v0.4.0") }
+                Section("Version") { Text("CODM Rank Tracker v0.5.0") }
             }
             .navigationTitle("Tracker Settings")
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { showSettings = false } } }
