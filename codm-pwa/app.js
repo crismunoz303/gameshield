@@ -10,7 +10,7 @@ let uid="", player=null, readings=[], matches=[], range="all", refreshing=false,
 const MATCH_MODES=["","Search & Destroy","Hardpoint","Domination","Team Deathmatch","Frontline","Other Ranked MP"];
 function validMatch(m){
   if(!m||typeof m.id!=="string"||!/^[0-9a-z-]{8,70}$/.test(m.id)||
-     !Number.isSafeInteger(m.gain)||m.gain<1||m.gain>99999||
+     (m.gain!==null&&(!Number.isSafeInteger(m.gain)||m.gain<1||m.gain>99999))||
      typeof m.playedOn!=="string"||typeof m.mode!=="string"||
      !MATCH_MODES.includes(m.mode)||typeof m.note!=="string"||m.note.length>120)return false;
   if(m.playedOn){
@@ -358,12 +358,17 @@ function largestObservedGain(){
   return best;
 }
 function renderMatchRecords(){
-  const best=matches.reduce((b,m)=>!b||m.gain>b.gain?m:b,null);
-  const label=best?(best.mode||"Mode not saved")+(best.playedOn?" · "+best.playedOn:" · date not saved"):"Log the rating gain from a single ranked match.";
-  safeText("bestMatchGain",best?signed(best.gain):"—");
-  safeText("bestMatchContext",label);
-  safeText("bestManualGain",best?signed(best.gain):"—");
-  safeText("bestManualContext",best?label+" · entered by you":"No individual match saved yet");
+  // Only numeric entries can be compared by points; an unquantified personal
+  // highlight is displayed until a quantified result is entered.
+  const best=matches.reduce((b,m)=>!b||(m.gain??-1)>(b.gain??-1)?m:b,null);
+  const label=best?(best.mode||"Mode not saved")+(best.playedOn?" · "+best.playedOn:" · date not saved"):"Log a memorable ranked match, even without its rating points.";
+  const detail=best?label+(best.note?" · "+best.note:""):"";
+  const unknown=best&&best.gain===null;
+  safeText("bestMatchGain",best?(unknown?"?":signed(best.gain)):"—");
+  safeText("bestMatchUnit",unknown?"RATING NOT RECORDED":"RATING GAIN");
+  safeText("bestMatchContext",detail||label);
+  safeText("bestManualGain",best?(unknown?"?":signed(best.gain)):"—");
+  safeText("bestManualContext",best?(unknown?"Gain unknown · ":"")+detail+" · entered by you":"No individual match saved yet");
   const observed=largestObservedGain();
   safeText("biggestReadingJump",observed?signed(observed.gain):"—");
   safeText("biggestReadingContext",observed?
@@ -379,14 +384,14 @@ function renderMatchRecords(){
   matches.slice().reverse().slice(0,12).forEach(m=>{
     const item=document.createElement("div");item.className="match-entry";
     const left=document.createElement("div");
-    const gain=document.createElement("strong");gain.textContent=signed(m.gain)+" RATING";
+    const gain=document.createElement("strong");gain.textContent=m.gain===null?"RATING UNKNOWN":signed(m.gain)+" RATING";
     const info=document.createElement("small");
     info.textContent=(m.mode||"Mode not saved")+(m.playedOn?" · "+m.playedOn:" · date not saved");
     left.append(gain,info);
     if(m.note){const note=document.createElement("span");note.textContent=m.note;left.append(note)}
     const remove=document.createElement("button");remove.type="button";remove.className="match-remove";
     remove.textContent="REMOVE";remove.dataset.matchId=m.id;
-    remove.setAttribute("aria-label","Remove manually entered match "+signed(m.gain));
+    remove.setAttribute("aria-label","Remove manually entered match "+(m.gain===null?"with unknown gain":signed(m.gain)));
     item.append(left,remove);root.append(item);
   });
   if(matches.length>12){
@@ -411,10 +416,13 @@ function saveMatch(event){
   if(!uid){note("Connect your account before saving.");return}
   const entry={
     id:Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,12),
-    gain:Number($("matchGain").value),playedOn:$("matchDate").value,
+    gain:$("matchGain").value.trim()===""?null:Number($("matchGain").value),playedOn:$("matchDate").value,
     mode:$("matchMode").value,note:$("matchNote").value.trim()
   };
-  if(!validMatch(entry)){note("Enter a positive whole-number rating gain (1–99,999) and valid optional details.");return}
+  if(!validMatch(entry)){note("Enter a valid result: rating gain (optional, 1–99,999), date, mode, or note.");return}
+  if(entry.gain===null&&!entry.playedOn&&!entry.mode&&!entry.note){
+    note("When the rating is unknown, add a note, mode, or date so the game can be identified.");return;
+  }
   matches=[...matches,entry].slice(-100);
   store(uidKey("matches"),matches);
   $("matchForm").reset();closeMatchForm();renderMatchRecords();
@@ -737,7 +745,7 @@ $("matchLog").addEventListener("click",event=>{
   const btn=event.target.closest("button[data-match-id]");
   if(!btn||!uid)return;
   const entry=matches.find(m=>m.id===btn.dataset.matchId);
-  if(!entry||!confirm("Remove this manually logged match ("+signed(entry.gain)+" rating)?"))return;
+  if(!entry||!confirm("Remove this manually logged match ("+(entry.gain===null?"rating not recorded":signed(entry.gain)+" rating")+")?"))return;
   matches=matches.filter(m=>m.id!==entry.id);
   store(uidKey("matches"),matches);renderMatchRecords();
   note("Match entry removed from this device.");

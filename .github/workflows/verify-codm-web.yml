@@ -75,7 +75,7 @@ jobs:
             'blueprintSearch','backBlueprintBtn','viewHistoryBtn','backToStatsBtn','profileXP',
             'avatar','rankArt','refreshBtn','analyticsRows','chart','rankEvents','backupBtn',
             'restoreBtn','restoreFile','uidInput','consent','bestMatchGain','bestManualGain',
-            'biggestReadingJump','matchForm','matchGain','matchLog','logMatchShortcut']){
+            'biggestReadingJump','matchForm','matchGain','matchLog','logMatchShortcut','bestMatchUnit']){
             assert.ok(html.includes('id="'+id+'"'),'missing user-interface element '+id);
           }
           for(const feature of [
@@ -93,6 +93,10 @@ jobs:
           assert.ok(js.includes('function renderMatchRecords(){'));
           assert.ok(js.includes('store(uidKey("matches"),matches)'));
           assert.ok(js.includes('version:2,uid'));
+          assert.ok(js.includes('gain:$("matchGain").value.trim()===""?null:Number($("matchGain").value)'));
+          assert.ok(js.includes('m.gain===null?"RATING UNKNOWN"'));
+          assert.ok(!html.includes('id="matchGain" type="number" inputmode="numeric" min="1" max="99999" step="1" placeholder="Exact +rating shown after the match" required'));
+          assert.ok(html.includes('Leave blank if you don’t remember'));
           assert.ok(!js.includes('switchWeaponMode('));
           assert.ok(!html.includes('modeGunsmith'));
           assert.ok(!html.includes('id="metaTTK"'));
@@ -118,7 +122,7 @@ jobs:
           assert.ok(css.includes('.meta-weapons,.blueprint-list{display:flex'));
           assert.ok(css.includes('.tabs.dock-retracted'));
           assert.ok(css.includes('env(safe-area-inset-top'));
-          assert.ok(sw.includes('rankcommand-static-v19'));
+          assert.ok(sw.includes('rankcommand-static-v20'));
           assert.ok(sw.includes('/meta.js')&&sw.includes('/blueprints.js'));
           assert.ok(!sw.includes('/progression.js'));
           console.log('PASS: source-accurate data, guest weapons, five-tab IA, list > details, saved UID data, rank artwork, and browser cache');

@@ -92,7 +92,7 @@
         </section>
         <section class="match-spotlight" aria-label="Best manually logged ranked match">
           <div class="match-spotlight-head"><span>03 / MATCH RECORD</span><strong>BEST GAME SO FAR</strong></div>
-          <div class="match-spotlight-result"><strong id="bestMatchGain">—</strong><span>RATING GAIN</span></div>
+          <div class="match-spotlight-result"><strong id="bestMatchGain">—</strong><span id="bestMatchUnit">RATING GAIN</span></div>
           <p id="bestMatchContext">Log the rating gain from a single ranked match.</p>
           <button type="button" class="secondary full" id="logMatchShortcut">+ LOG YOUR BEST MATCH</button>
           <p class="small">Manually saved match results. The connected stats provider does not supply individual game results.</p>
@@ -141,11 +141,11 @@
             <div class="match-metric"><small>BEST GAME SO FAR / MANUAL ENTRY</small><strong id="bestManualGain">—</strong><p id="bestManualContext">No individual match saved yet</p></div>
             <div class="match-metric"><small>BIGGEST OBSERVED RATING JUMP</small><strong id="biggestReadingJump">—</strong><p id="biggestReadingContext">At least two changed account readings are needed.</p></div>
           </div>
-          <p class="small">These are separate records. An increase between lookups can include multiple games. Individual matches must be entered from an actual post-match result.</p>
+          <p class="small">These are separate records. Increases between lookups can include multiple games. You can save a personally remembered match without an exact rating gain; it will be clearly marked unknown.</p>
           <button class="secondary full" type="button" id="toggleMatchForm" aria-expanded="false" aria-controls="matchForm">+ LOG A RANKED MATCH</button>
           <form id="matchForm" class="match-form" hidden>
-            <label for="matchGain">RATING POINTS GAINED IN ONE MATCH *</label>
-            <input id="matchGain" type="number" inputmode="numeric" min="1" max="99999" step="1" placeholder="Exact +rating shown after the match" required>
+            <label for="matchGain">RATING POINTS GAINED / OPTIONAL</label>
+            <input id="matchGain" type="number" inputmode="numeric" min="1" max="99999" step="1" placeholder="Leave blank if you don’t remember">
             <label for="matchMode">GAME MODE / OPTIONAL</label>
             <select id="matchMode">
               <option value="">Not recorded</option>
@@ -155,8 +155,8 @@
             <label for="matchDate">DATE PLAYED / OPTIONAL</label>
             <input id="matchDate" type="date">
             <label for="matchNote">MATCH NOTE / OPTIONAL</label>
-            <input id="matchNote" type="text" maxlength="120" placeholder="Example: big comeback, MVP, rank promotion">
-            <p class="small">Save only a result from one actual game. Entries are supplied by you and stored locally for this UID, not fetched or verified by the game provider.</p>
+            <input id="matchNote" type="text" maxlength="120" placeholder="Example: that game boosted my rank a lot">
+            <p class="small">You can leave the rating blank; add a note, date or game mode to identify the match. Unknown rating points are never estimated. Entries are supplied by you, saved locally for this UID, and not verified by the game provider.</p>
             <div class="match-form-actions"><button class="primary" type="submit">SAVE MATCH ↗</button><button class="secondary" id="cancelMatchBtn" type="button">CANCEL</button></div>
           </form>
           <div class="match-log-head"><strong>YOUR MATCH LOG</strong><span id="matchLogCount">0 SAVED</span></div>
