@@ -6,7 +6,21 @@ const signed = x => x == null || !Number.isFinite(x) ? "—" : (x > 0 ? "+" : ""
 const safeText = (id,text) => { const el=$(id); if(el)el.textContent=String(text??"—"); };
 const validUID = value => /^\d{12,22}$/.test(value);
 const own = (object,key) => Object.prototype.hasOwnProperty.call(object,key);
-let uid="", player=null, readings=[], range="all", refreshing=false, timer=null;
+let uid="", player=null, readings=[], matches=[], range="all", refreshing=false, timer=null;
+const MATCH_MODES=["","Search & Destroy","Hardpoint","Domination","Team Deathmatch","Frontline","Other Ranked MP"];
+function validMatch(m){
+  if(!m||typeof m.id!=="string"||!/^[0-9a-z-]{8,70}$/.test(m.id)||
+     !Number.isSafeInteger(m.gain)||m.gain<1||m.gain>99999||
+     typeof m.playedOn!=="string"||typeof m.mode!=="string"||
+     !MATCH_MODES.includes(m.mode)||typeof m.note!=="string"||m.note.length>120)return false;
+  if(m.playedOn){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(m.playedOn))return false;
+    const date=new Date(m.playedOn+"T00:00:00Z");
+    if(!Number.isFinite(date.getTime())||date.toISOString().slice(0,10)!==m.playedOn||
+       date.getTime()>Date.now()+86400000)return false;
+  }
+  return true;
+}
 let currentTab="command";
 function load(key,fallback){try{const raw=localStorage.getItem(STORAGE_PREFIX+key);return raw?JSON.parse(raw):fallback}catch{return fallback}}
 function store(key,value){try{localStorage.setItem(STORAGE_PREFIX+key,JSON.stringify(value))}catch{}}
@@ -16,6 +30,9 @@ function loadAccount(){
   readings=load(uidKey("readings"),[]);
   if(!Array.isArray(readings))readings=[];
   readings=readings.filter(x=>Number.isSafeInteger(x.xp)&&x.xp>=0&&typeof x.timestamp==="number"&&typeof x.rank==="string").slice(-1000);
+  matches=load(uidKey("matches"),[]);
+  if(!Array.isArray(matches))matches=[];
+  matches=matches.filter(validMatch).slice(-100);
 }
 function showConnect(){
   $("connectPanel").hidden=false;
@@ -181,7 +198,7 @@ function render(){
   safeText("mToday",signed(todayNet()));
   safeText("mWeek",signed(netWithin(7*86400000)));
   safeText("mBest",readings.length?fmt(Math.max(...readings.map(x=>x.xp))):"—");
-  renderPlayer();renderAnalytics();renderHistory();
+  renderPlayer();renderAnalytics();renderHistory();renderMatchRecords();
 }
 
 function row(label,value){
@@ -332,6 +349,77 @@ function renderHistory(){
     r.append(icon,date,value);root.append(r);
   });
 }
+function largestObservedGain(){
+  let best=null;
+  for(let i=1;i<readings.length;i++){
+    const gain=readings[i].xp-readings[i-1].xp;
+    if(gain>0&&(!best||gain>best.gain))best={gain,from:readings[i-1],to:readings[i]};
+  }
+  return best;
+}
+function renderMatchRecords(){
+  const best=matches.reduce((b,m)=>!b||m.gain>b.gain?m:b,null);
+  const label=best?(best.mode||"Mode not saved")+(best.playedOn?" · "+best.playedOn:" · date not saved"):"Log the rating gain from a single ranked match.";
+  safeText("bestMatchGain",best?signed(best.gain):"—");
+  safeText("bestMatchContext",label);
+  safeText("bestManualGain",best?signed(best.gain):"—");
+  safeText("bestManualContext",best?label+" · entered by you":"No individual match saved yet");
+  const observed=largestObservedGain();
+  safeText("biggestReadingJump",observed?signed(observed.gain):"—");
+  safeText("biggestReadingContext",observed?
+    new Date(observed.from.timestamp).toLocaleString()+" → "+new Date(observed.to.timestamp).toLocaleString()+
+    " · Between account readings; may include multiple games.":"At least two changed account readings are needed.");
+  const root=$("matchLog");root.replaceChildren();
+  safeText("matchLogCount",fmt(matches.length)+" SAVED");
+  if(!matches.length){
+    const empty=document.createElement("p");empty.className="history-empty";
+    empty.textContent="Your match log is empty. Enter a result from a single ranked game to start.";
+    root.append(empty);return;
+  }
+  matches.slice().reverse().slice(0,12).forEach(m=>{
+    const item=document.createElement("div");item.className="match-entry";
+    const left=document.createElement("div");
+    const gain=document.createElement("strong");gain.textContent=signed(m.gain)+" RATING";
+    const info=document.createElement("small");
+    info.textContent=(m.mode||"Mode not saved")+(m.playedOn?" · "+m.playedOn:" · date not saved");
+    left.append(gain,info);
+    if(m.note){const note=document.createElement("span");note.textContent=m.note;left.append(note)}
+    const remove=document.createElement("button");remove.type="button";remove.className="match-remove";
+    remove.textContent="REMOVE";remove.dataset.matchId=m.id;
+    remove.setAttribute("aria-label","Remove manually entered match "+signed(m.gain));
+    item.append(left,remove);root.append(item);
+  });
+  if(matches.length>12){
+    const detail=document.createElement("p");detail.className="small";
+    detail.textContent="Showing 12 most recently saved matches of "+fmt(matches.length)+".";
+    root.append(detail);
+  }
+}
+function openMatchForm(){
+  if(!uid){note("Connect your COD Mobile account first.");return}
+  showTab("analytics");
+  $("matchForm").hidden=false;
+  $("toggleMatchForm").setAttribute("aria-expanded","true");
+  requestAnimationFrame(()=>$("matchGain").focus());
+}
+function closeMatchForm(){
+  $("matchForm").hidden=true;
+  $("toggleMatchForm").setAttribute("aria-expanded","false");
+}
+function saveMatch(event){
+  event.preventDefault();
+  if(!uid){note("Connect your account before saving.");return}
+  const entry={
+    id:Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,12),
+    gain:Number($("matchGain").value),playedOn:$("matchDate").value,
+    mode:$("matchMode").value,note:$("matchNote").value.trim()
+  };
+  if(!validMatch(entry)){note("Enter a positive whole-number rating gain (1–99,999) and valid optional details.");return}
+  matches=[...matches,entry].slice(-100);
+  store(uidKey("matches"),matches);
+  $("matchForm").reset();closeMatchForm();renderMatchRecords();
+  note("Ranked match saved on this device.");
+}
 function drawChart(){
   const canvas=$("chart"),box=canvas.parentElement,empty=$("chartEmpty");
   const selected=readings.filter(x=>range==="all"||x.timestamp>=Date.now()-Number(range)*86400000);
@@ -367,8 +455,9 @@ function downloadFile(blob,name){
 }
 function backupHistory(){
   if(!uid){note("Connect a player first.");return}
-  const payload={format:"rankcommand-xp-backup",version:1,uid,
-    createdAt:new Date().toISOString(),readings:readings.map(x=>({timestamp:x.timestamp,xp:x.xp,rank:x.rank}))};
+  const payload={format:"rankcommand-xp-backup",version:2,uid,
+    createdAt:new Date().toISOString(),readings:readings.map(x=>({timestamp:x.timestamp,xp:x.xp,rank:x.rank})),
+    matches:matches.map(m=>({id:m.id,gain:m.gain,playedOn:m.playedOn,mode:m.mode,note:m.note}))};
   downloadFile(new Blob([JSON.stringify(payload,null,2)],{type:"application/json"}),
     "rank-command-"+uid+"-backup.json");
   note("Backup download started. Keep this file somewhere safe.");
@@ -378,7 +467,7 @@ async function restoreHistory(file){
   if(file.size>2000000){note("Backup is too large (2 MB maximum).");return}
   try{
     const data=JSON.parse(await file.text());
-    if(data?.format!=="rankcommand-xp-backup"||data.version!==1||!Array.isArray(data.readings))
+    if(data?.format!=="rankcommand-xp-backup"||![1,2].includes(data.version)||!Array.isArray(data.readings))
       throw new Error("This is not a Rank Command backup.");
     if(data.uid!==uid)throw new Error("This backup belongs to another player UID.");
     if(data.readings.length>1500)throw new Error("Backup contains too many readings.");
@@ -387,16 +476,24 @@ async function restoreHistory(file){
       Number.isSafeInteger(x.timestamp)&&x.timestamp>0&&x.timestamp<now+86400000&&
       typeof x.rank==="string"&&x.rank.length>0&&x.rank.length<=80;
     if(!data.readings.every(valid))throw new Error("Backup has invalid records.");
-    if(!data.readings.length){note("Backup contains no readings.");return}
+    const incomingMatches=data.version===2?data.matches:[];
+    if(!Array.isArray(incomingMatches)||incomingMatches.length>100||
+       !incomingMatches.every(validMatch))throw new Error("Backup has invalid match records.");
+    if(!data.readings.length&&!incomingMatches.length){note("Backup contains no readings or matches.");return}
     const merged=[...readings,...data.readings.map(x=>({timestamp:x.timestamp,xp:x.xp,rank:x.rank}))];
     const unique=new Map();
     merged.forEach(x=>unique.set([x.timestamp,x.xp,x.rank].join("/"),x));
     const next=[...unique.values()].sort((a,b)=>a.timestamp-b.timestamp).slice(-1000);
     const additional=next.length-readings.length;
-    if(!confirm("Restore "+data.readings.length+" backed-up readings for this UID? Existing records will be merged; at most 1,000 latest readings are kept."))return;
-    readings=next;store(uidKey("readings"),readings);
+    const uniqueMatches=new Map();
+    [...matches,...incomingMatches].forEach(m=>uniqueMatches.set(m.id,m));
+    const nextMatches=[...uniqueMatches.values()].slice(-100);
+    if(!confirm("Restore "+data.readings.length+" readings and "+incomingMatches.length+
+      " manually logged matches for this UID? Records will be merged; up to 1,000 readings and 100 matches are retained."))return;
+    readings=next;matches=nextMatches;
+    store(uidKey("readings"),readings);store(uidKey("matches"),matches);
     render();
-    note("Backup merged · "+fmt(Math.max(0,additional))+" additional saved readings.");
+    note("Backup merged · "+fmt(Math.max(0,additional))+" additional readings; "+fmt(incomingMatches.length)+" match entries imported.");
   }catch(error){note(error?.message||"Couldn't read this backup.")}
 }
 function exportHistory(){
@@ -632,6 +729,19 @@ $("metaCopy").addEventListener("click",async()=>{
 
 document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.go)));
 $("viewHistoryBtn").addEventListener("click",()=>showTab("history"));
+$("logMatchShortcut").addEventListener("click",openMatchForm);
+$("toggleMatchForm").addEventListener("click",()=>$("matchForm").hidden?openMatchForm():closeMatchForm());
+$("cancelMatchBtn").addEventListener("click",closeMatchForm);
+$("matchForm").addEventListener("submit",saveMatch);
+$("matchLog").addEventListener("click",event=>{
+  const btn=event.target.closest("button[data-match-id]");
+  if(!btn||!uid)return;
+  const entry=matches.find(m=>m.id===btn.dataset.matchId);
+  if(!entry||!confirm("Remove this manually logged match ("+signed(entry.gain)+" rating)?"))return;
+  matches=matches.filter(m=>m.id!==entry.id);
+  store(uidKey("matches"),matches);renderMatchRecords();
+  note("Match entry removed from this device.");
+});
 $("backToStatsBtn").addEventListener("click",()=>showTab("analytics"));
 document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{
   if(b.dataset.tab==="meta")metaDetailOpen=false;
@@ -663,7 +773,7 @@ $("restoreFile").addEventListener("change",async event=>{
   await restoreHistory(file);
   event.target.value="";
 });
-$("disconnectBtn").addEventListener("click",()=>{uid="";player=null;readings=[];store("uid","");store("acceptedUid","");showConnect();showTab("command")});
+$("disconnectBtn").addEventListener("click",()=>{uid="";player=null;readings=[];matches=[];store("uid","");store("acceptedUid","");closeMatchForm();showConnect();showTab("command")});
 $("clearBtn").addEventListener("click",()=>{if(!uid||!confirm("Delete this player's locally saved XP history? This won't affect COD Mobile."))return;readings=[];store(uidKey("readings"),readings);render();note("Local XP history erased.")});
 $("shareBtn").addEventListener("click",async()=>{
   const data={title:"CODM Rank Command",text:"Track your COD Mobile rank with your own UID.",url:location.origin};

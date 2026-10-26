@@ -74,7 +74,8 @@ jobs:
             'pane-blueprints','blueprintBrowser','blueprintList','blueprintDetail','blueprintSource',
             'blueprintSearch','backBlueprintBtn','viewHistoryBtn','backToStatsBtn','profileXP',
             'avatar','rankArt','refreshBtn','analyticsRows','chart','rankEvents','backupBtn',
-            'restoreBtn','restoreFile','uidInput','consent']){
+            'restoreBtn','restoreFile','uidInput','consent','bestMatchGain','bestManualGain',
+            'biggestReadingJump','matchForm','matchGain','matchLog','logMatchShortcut']){
             assert.ok(html.includes('id="'+id+'"'),'missing user-interface element '+id);
           }
           for(const feature of [
@@ -89,6 +90,9 @@ jobs:
             'localStorage.setItem(STORAGE_PREFIX+uidKey("avatar")',
             'data.uid!==uid','data.readings.every(valid)','requestedUID=uid'
           ])assert.ok(js.includes(feature),'missing behavior '+feature);
+          assert.ok(js.includes('function renderMatchRecords(){'));
+          assert.ok(js.includes('store(uidKey("matches"),matches)'));
+          assert.ok(js.includes('version:2,uid'));
           assert.ok(!js.includes('switchWeaponMode('));
           assert.ok(!html.includes('modeGunsmith'));
           assert.ok(!html.includes('id="metaTTK"'));
@@ -114,7 +118,7 @@ jobs:
           assert.ok(css.includes('.meta-weapons,.blueprint-list{display:flex'));
           assert.ok(css.includes('.tabs.dock-retracted'));
           assert.ok(css.includes('env(safe-area-inset-top'));
-          assert.ok(sw.includes('rankcommand-static-v18'));
+          assert.ok(sw.includes('rankcommand-static-v19'));
           assert.ok(sw.includes('/meta.js')&&sw.includes('/blueprints.js'));
           assert.ok(!sw.includes('/progression.js'));
           console.log('PASS: source-accurate data, guest weapons, five-tab IA, list > details, saved UID data, rank artwork, and browser cache');

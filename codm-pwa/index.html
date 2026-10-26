@@ -90,6 +90,13 @@
             <article class="metric purple"><small>BEST RECORDED XP</small><strong id="mBest">—</strong><span>Highest saved reading</span></article>
           </div>
         </section>
+        <section class="match-spotlight" aria-label="Best manually logged ranked match">
+          <div class="match-spotlight-head"><span>03 / MATCH RECORD</span><strong>BEST GAME SO FAR</strong></div>
+          <div class="match-spotlight-result"><strong id="bestMatchGain">—</strong><span>RATING GAIN</span></div>
+          <p id="bestMatchContext">Log the rating gain from a single ranked match.</p>
+          <button type="button" class="secondary full" id="logMatchShortcut">+ LOG YOUR BEST MATCH</button>
+          <p class="small">Manually saved match results. The connected stats provider does not supply individual game results.</p>
+        </section>
         </div>
       </section>
       <section class="pane" id="pane-player">
@@ -128,6 +135,33 @@
         <button type="button" id="viewHistoryBtn" class="view-history">↗ View saved reading history <span>↗</span></button>
         <p class="guest-prompt" id="statsGuest" hidden>Connect a player on the Home tab to see recorded Multiplayer rating history.</p>
         <div class="intel-hud"><div><small>LAST SAVED RATING</small><strong id="intelCurrent">—</strong></div><div><small>NET TRACKED CHANGE</small><strong id="intelDelta">—</strong></div><div class="intel-hud-foot"><span>MP // ANALYTICS</span><span id="intelSamples">0 READINGS</span></div></div>
+        <section class="card match-records">
+          <div class="section-label"><b>01 / RANKED MATCH RECORD</b><small>Personal best + lookup changes</small></div>
+          <div class="match-metrics">
+            <div class="match-metric"><small>BEST GAME SO FAR / MANUAL ENTRY</small><strong id="bestManualGain">—</strong><p id="bestManualContext">No individual match saved yet</p></div>
+            <div class="match-metric"><small>BIGGEST OBSERVED RATING JUMP</small><strong id="biggestReadingJump">—</strong><p id="biggestReadingContext">At least two changed account readings are needed.</p></div>
+          </div>
+          <p class="small">These are separate records. An increase between lookups can include multiple games. Individual matches must be entered from an actual post-match result.</p>
+          <button class="secondary full" type="button" id="toggleMatchForm" aria-expanded="false" aria-controls="matchForm">+ LOG A RANKED MATCH</button>
+          <form id="matchForm" class="match-form" hidden>
+            <label for="matchGain">RATING POINTS GAINED IN ONE MATCH *</label>
+            <input id="matchGain" type="number" inputmode="numeric" min="1" max="99999" step="1" placeholder="Exact +rating shown after the match" required>
+            <label for="matchMode">GAME MODE / OPTIONAL</label>
+            <select id="matchMode">
+              <option value="">Not recorded</option>
+              <option>Search &amp; Destroy</option><option>Hardpoint</option><option>Domination</option>
+              <option>Team Deathmatch</option><option>Frontline</option><option>Other Ranked MP</option>
+            </select>
+            <label for="matchDate">DATE PLAYED / OPTIONAL</label>
+            <input id="matchDate" type="date">
+            <label for="matchNote">MATCH NOTE / OPTIONAL</label>
+            <input id="matchNote" type="text" maxlength="120" placeholder="Example: big comeback, MVP, rank promotion">
+            <p class="small">Save only a result from one actual game. Entries are supplied by you and stored locally for this UID, not fetched or verified by the game provider.</p>
+            <div class="match-form-actions"><button class="primary" type="submit">SAVE MATCH ↗</button><button class="secondary" id="cancelMatchBtn" type="button">CANCEL</button></div>
+          </form>
+          <div class="match-log-head"><strong>YOUR MATCH LOG</strong><span id="matchLogCount">0 SAVED</span></div>
+          <div id="matchLog" aria-live="polite"></div>
+        </section>
         <section class="card">
           <div class="section-label"><b>01 / RATING TELEMETRY</b><small>Differences between stored readings</small></div>
           <div class="range-buttons"><button class="selected" data-range="all">ALL</button><button data-range="7">7 DAYS</button><button data-range="1">24 HOURS</button></div>

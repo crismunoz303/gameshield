@@ -826,3 +826,39 @@ body.guest #pane-analytics .intel-hud,body.guest #pane-analytics section.card{di
  .meta-weapons,.blueprint-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
  .meta-detail,.blueprint-detail{max-width:680px;margin-left:auto;margin-right:auto}
 }
+
+/* Player-entered best game; synchronized rating changes remain separately labeled. */
+.match-spotlight,.match-records{
+  background:linear-gradient(135deg,#292027,#171e23 65%);
+  border:1px solid #6d4952;border-top:3px solid var(--red);
+  padding:18px 15px 20px;margin:0 0 32px;overflow:hidden;
+}
+.match-spotlight-head{display:flex;flex-direction:column;gap:7px;border-bottom:1px solid #ffffff24;padding-bottom:12px}
+.match-spotlight-head span{font:700 9px var(--font-mono);color:#ff9da4;letter-spacing:.08em}
+.match-spotlight-head strong{font:700 clamp(35px,9vw,52px)/.95 var(--font-display);color:#fff}
+.match-spotlight-result{display:flex;gap:12px;align-items:baseline;padding:13px 0 0;flex-wrap:wrap}
+.match-spotlight-result strong{font:700 clamp(62px,18vw,104px)/.9 var(--font-display);color:var(--green);font-variant-numeric:tabular-nums}
+.match-spotlight-result span{font:700 10px var(--font-mono);color:#e0e5e1}
+.match-spotlight>p:not(.small){font:650 12px/1.5 var(--font-ui);color:#f4eeee;margin:5px 0 17px}
+.match-spotlight>.small{margin:12px 0 0;font:600 10px/1.6 var(--font-ui);color:#a5b0b3}
+.match-metrics{display:grid;grid-template-columns:1fr;gap:10px}
+.match-metric{background:#12191fcc;padding:16px 12px;border:1px solid #46535b;border-left:3px solid var(--red);min-width:0}
+.match-metric>small{font:700 9px/1.5 var(--font-mono);color:#c5d2d4}
+.match-metric>strong{display:block;font:700 66px/.95 var(--font-display);color:var(--green);font-variant-numeric:tabular-nums;margin:5px 0}
+.match-metric>p{font:600 10px/1.55 var(--font-ui);color:#aebdc3;overflow-wrap:anywhere;margin:6px 0 0}
+.match-records>.small{font:600 10px/1.6 var(--font-ui);color:#b1bfc1;margin:14px 0}
+.match-form{padding:16px 12px;margin-top:13px;border:1px solid #4f5c61;background:#11191e}
+.match-form label{display:block;font:700 9px var(--font-mono);color:#d1dcdd;margin:13px 0 7px;letter-spacing:.03em}
+.match-form input,.match-form select{width:100%;min-height:46px;background:#1b252b;border:1px solid #596970;border-radius:3px;padding:10px 12px;color:#fff;font:600 13px var(--font-ui);color-scheme:dark}
+.match-form input:focus-visible,.match-form select:focus-visible{outline:2px solid var(--red-hot);outline-offset:1px}
+.match-form .small{font:600 10px/1.6 var(--font-ui);color:#b3c0c3;margin:14px 0}
+.match-form-actions{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:9px}
+.match-form-actions button{min-height:45px;font-size:11px;justify-content:center}
+.match-log-head{display:flex;justify-content:space-between;gap:12px;padding:23px 0 9px;font:700 10px var(--font-mono);color:#e4e8e8}
+.match-log-head span{color:#b3c0c2}
+.match-entry{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid #64717b55}
+.match-entry>div{display:flex;flex-direction:column;gap:5px;min-width:0}
+.match-entry strong{font:800 17px var(--font-ui);color:var(--green)}
+.match-entry small,.match-entry span{font:600 10px/1.4 var(--font-ui);color:#b0bdc1;overflow-wrap:anywhere}
+.match-remove{flex:none;border:1px solid #78434b;background:#341f28;color:#ffc4c7;padding:9px;font:700 9px var(--font-mono);min-height:38px}
+@media(min-width:640px){.match-metrics{grid-template-columns:1fr 1fr}}
